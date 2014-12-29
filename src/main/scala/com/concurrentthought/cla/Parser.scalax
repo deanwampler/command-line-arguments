@@ -1,0 +1,103 @@
+package com.concurrentthought.cla
+// import shapeless.HMap._
+import scala.util.{Try, Success, Failure}
+
+trait Parselet[V] {
+  def apply(s: String): Try[V]
+}
+
+object Parselet {
+  // No toBoolean; use Flag instead.
+  implicit val toByte   : Parselet[Byte]    = new Parselet[Byte] {
+    def apply(s: String): Try[Byte] = Try(s.toByte)
+  }
+  /** Keep only the first character. */
+  implicit val toChar   : Parselet[Char]    = new Parselet[Char] {
+    def apply(s: String): Try[Char] = Try(s(0))
+  }
+  implicit val toInt    : Parselet[Int]     = new Parselet[Int] {
+    def apply(s: String): Try[Int] = Try(s.toInt)
+  }
+  implicit val toLong   : Parselet[Long]    = new Parselet[Long] {
+    def apply(s: String): Try[Long] = Try(s.toLong)
+  }
+  implicit val toFloat  : Parselet[Float]   = new Parselet[Float] {
+    def apply(s: String): Try[Float] = Try(s.toFloat)
+  }
+  implicit val toDouble : Parselet[Double]  = new Parselet[Double] {
+    def apply(s: String): Try[Double] = Try(s.toDouble)
+  }
+  implicit val toString : Parselet[String]  = new Parselet[String] {
+    def apply(s: String): Try[String] = Success(s)
+  }
+
+  /**
+   * Splits an argument into a sequence on the user-specified delimiter(s).
+   * @see toSeqWS[V]
+   */
+  def toSeq[V](delims: String)(implicit p: Parselet[V]): Parselet[Seq[V]] =
+    new Parselet[Seq[V]] {
+      def apply(s: String): Try[Seq[V]] = Try {
+        require (delims.trim.length > 0, "Delimiters string is empty!")
+        val array = s.split("["+delims+"]+").map(s => p(s))
+        array.foldLeft(Success(Vector[V].empty)){ (try1, try2) =>
+          case (Failure[_], Failure[_]) => try1.map()
+          case (Failure[_], Failure[_]) => try2.map(x => Vector(x))
+          case (Failure[_], Failure[_]) => try2.map(x => Vector(x))
+
+        }
+      }
+    }
+
+  /**
+   * Splits an argument into a sequence on the user-specified delimiter(s) and
+   * also removes whitespace around the delimiters.
+   * @see toSeq[V]
+   */
+  def toSeqWS[V](delims: String)(implicit p: Parselet[V]) =
+    toSeq("\\s*["+delims+"]\\s*")(p)
+
+  /**
+   * Splits a CSV (comma-separated values), including any whitespace around
+   * the commas!
+   */
+  def toCSV[V](implicit p: Parselet[V]) = toSeqWS(",")(p)
+
+  /**
+   * Splits a TSV (tab-separated values), including any whitespace around
+   * the tabs!
+   */
+  def toTSV[V](implicit p: Parselet[V]) = toSeqWS("\t")(p)
+
+  /** Returns the class path as a sequence of path elements. */
+  def toClassPaths = toSeq[String](sys.env.getOrElse("path.separator", ":"))
+
+  /** Returns the parts of a file path as a sequence of strings. */
+  def toFilePaths = toSeq[String](sys.env.getOrElse("file.separator", "/"))
+}
+
+case class Parser(opts: Seq[Opt[_]]) {
+  def apply(args: Seq[String]): Try[Map[String,Any]] = Try {
+    def f(args2: Seq[String], map: Map[String,Any]): Map[String,Any] = args2 match {
+      case Nil => map
+      case head +: tail =>
+        val (k,v) = findOpt(head) match {
+          case flag: Flag => (flag.name, true)
+          case opt => (opt.name, opt.parselet)
+        }
+        f(tail, map + (k -> v))
+    }
+    f(args, Map[String,Any].empty)
+  }
+
+  protected def findOpt(key: String): Opt[_] =
+    opts find { _.keysWithDashes contains key } match {
+      case None => throw new Parser.UnrecognizedArgument(key)
+      case Some(opt) => opt
+    }
+}
+
+object Parser {
+  case class UnrecognizedArgument(name: String) extends RuntimeException(
+    "Unrecognized argument: "+name)
+}
