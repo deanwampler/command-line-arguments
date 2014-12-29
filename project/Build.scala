@@ -28,11 +28,10 @@ object Resolvers {
 
 object Dependencies {
 
-  val scalaz         = "org.scalaz"     %% "scalaz-core"  % "7.1.0"
   val scalaTest      = "org.scalatest"  %% "scalatest"    % "2.2.1"  % "test"
   val scalaCheck     = "org.scalacheck" %% "scalacheck"   % "1.12.1" % "test"
 
-  val dependencies = Seq(scalaz, scalaTest, scalaCheck)
+  val dependencies = Seq(scalaTest, scalaCheck)
 }
 
 object CLABuild extends Build {
