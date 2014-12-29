@@ -51,6 +51,6 @@ object SampleOpts {
     help     = "seq help message",
     default  = Some(Nil))(_.toDouble)
 
- val allOpts = Seq(stringOpt, charOpt, byteOpt, intOpt, longOpt, floatOpt, doubleOpt, seqOpt)
- val allDefaults = allOpts.map(o => (o.name, o.default.get)).toMap + ("help" -> false)
+  val allOpts = Seq(stringOpt, charOpt, byteOpt, intOpt, longOpt, floatOpt, doubleOpt, seqOpt)
+  val allDefaults = allOpts.map(o => (o.name, o.default.get)).toMap + ("help" -> false)
 }
