@@ -4,7 +4,7 @@ import sbt.Keys._
 object BuildSettings {
 
   val Name = "command-line-arguments"
-  val Version = "0.0.1"
+  val Version = "0.1.0"
   val ScalaVersion = "2.11.4"
 
   lazy val buildSettings = Defaults.defaultSettings ++ Seq (
@@ -16,7 +16,6 @@ object BuildSettings {
     scalacOptions := Seq("-deprecation", "-unchecked", "-encoding", "utf8", "-Xlint")
   )
 }
-
 
 object Resolvers {
   val typesafe = "Typesafe Repository" at "http://repo.typesafe.com/typesafe/releases/"
