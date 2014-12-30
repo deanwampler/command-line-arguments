@@ -23,19 +23,26 @@ object SampleMain {
       help     = "Log level to use.",
       default  = Some(3))
     val path = Opt.seq[String](
-      delimsRE = "[:/]",
+      delimsRE = "[:;]",
       name     = "path",
       flags    = Seq("-p", "--path"),
       help     = "Path elements.")(_.toString)
 
     val args = Args(Seq(input, output, path, logLevel)).parse(argstrings)
-    val help = Help("run-main SampleMain", Some("Demonstrates the CLA API."))
-    if (args.handleHelp(help))   sys.exit(0)
+    val help = Help("run-main SampleMain", "Demonstrates the CLA API.")
     if (args.handleErrors(help)) sys.exit(1)
+    if (args.handleHelp(help))   sys.exit(0)
     args.printValues(help)
 
-    setLogLevel(args.get[Int]("log-level"))
+    setPathElements(args.get[Seq[String]]("path"))
+    setLogLevel(args.getOrElse("log-level", 0))
   }
 
-  protected def setLogLevel(level: Option[Int]) = {}
+  protected def setPathElements(path: Option[Seq[String]]) = path match {
+    case None => println("No path elements to set!")
+    case Some(seq) => println(s"Setting path elements to $seq")
+  }
+
+  protected def setLogLevel(level: Int) =
+    println(s"Setting log level to $level")
 }

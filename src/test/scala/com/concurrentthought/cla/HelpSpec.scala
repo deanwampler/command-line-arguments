@@ -17,7 +17,7 @@ class HelpSpec extends FunSpec {
         help    = "Output files.",
         default = Some("/dev/null"))(identity)
       val args = Args(Seq(in, out, Opt.quiet))
-      val help = Help("java HelpSpec", Some("A ScalaTest for the Help class."))
+      val help = Help("java HelpSpec", "A ScalaTest for the Help class.")
 
       assert(help(args) ===
         s"""Usage: java HelpSpec [options]
@@ -35,17 +35,17 @@ class HelpSpec extends FunSpec {
     }
 
     it ("returns a help string even when help is the only command-line argument supported") {
-      val help = Help("java HelpSpec", Some("A ScalaTest for no user-defined options."))
+      val help = Help("java HelpSpec")
       assert(help(Args(Nil)) ===
         s"""Usage: java HelpSpec [options]
-        |A ScalaTest for no user-defined options.
+        |
         |Where the supported options are the following:
         |  -h | --h | --help    Show this help message.
         |""".stripMargin)
     }
 
     it ("returns a help string that includes the error messages after parsing") {
-      val help = Help("java HelpSpec", Some("A ScalaTest for no user-defined options."))
+      val help = Help("java HelpSpec", "A ScalaTest for no user-defined options.")
       val args = Args(Seq(intOpt)).parse(Seq("--foo", "--int", "x"))
       assert(help(args) ===
         s"""Usage: java HelpSpec [options]

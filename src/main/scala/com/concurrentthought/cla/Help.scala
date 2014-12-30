@@ -18,13 +18,11 @@ object Help {
  */
 case class Help(
   programInvocation: String = "java -cp ...",
-  description: Option[String] = None) {
+  description: String = "") {
 
   /** Return the help string for the given `Args`. */
   def apply(args: Args): String = {
-    val lines = Vector(
-      s"Usage: $programInvocation [options]",
-      description.getOrElse("")) ++
+    val lines = Vector(s"Usage: $programInvocation [options]", description) ++
       errorsHelp(args) ++
       Vector("Where the supported options are the following:") ++ argsHelp(args)
     (for { s <- lines } yield s).mkString("", "\n", "\n")
