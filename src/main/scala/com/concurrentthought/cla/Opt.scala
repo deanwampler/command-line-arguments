@@ -1,5 +1,16 @@
 package com.concurrentthought.cla
 
+/**
+ * Abstraction or a command-line option, with or without a corresponding value.
+ * It has the following fields:
+ * <ol>
+ * <li>`name` - serve as a lookup key for retrieving the value.</li>
+ * <li>`flags` - the arguments that invoke the option, e.g., `-h` and `--help`.</li>
+ * <li>`help` - a message displayed for command-line help.</li>
+ * <li>`default` - an optional default value, for when the user doesn't specify the option.</li>
+ * <li>`parser` - An implementation feature for parsing arguments.</li>
+ * </ol>
+ */
 sealed trait Opt[V] {
   val name:    String
   val flags:   Seq[String]
@@ -12,6 +23,11 @@ sealed trait Opt[V] {
 }
 
 object Opt {
+  /**
+   * Each option attempts to parse one or more tokens in the argument list.
+   * If successful, it returns the option's name and extracted value as a tuple,
+   * along with the rest of the arguments.
+   */
   type Parser[V] = PartialFunction[Seq[String], ((String,V), Seq[String])]
 
   def apply[V](
@@ -28,6 +44,12 @@ object Opt {
     name   = "help",
     flags  = Seq("-h", "--h", "--help"),
     help   = "Show this help message.")
+
+  /** Minimize logging and other output. */
+  val quiet = Flag(
+    name  = "quiet",
+    flags = Seq("-q", "--quiet"),
+    help  = "Minimize output messages.")
 
   /** Create a String option */
   def string(
@@ -85,7 +107,6 @@ object Opt {
    * be trimmed of whitespace, in case you want it, but you can also remove any
    * internal whitespace (i.e., not at the beginning or end of the input string),
    * e.g., "\\s*[;-_]\\s*".
-   * @param delimsRE: String   A regex for the delimiter(s).
    */
   def seq[V](
     delimsRE:  String,
@@ -99,12 +120,11 @@ object Opt {
 }
 
 /**
- * A command line argument with an explicit value.
- * @param name:       String       Used as a map key in the returned options. Cannot be empty.
- * @param flags:      Seq[String]  The flags marking the option. One or two "-" required for each.
- * @param help:       String       Help string displayed if user asks for help. Can be empty.
- * @param default:    Option[V]    Use as the default, unless None is used.
- * @param fromString: String => V  Convert the found value from a String.
+ * A command line argument where an explicit value should follow. In addition to
+ * the fields in `Opt`, this type adds the following:
+ * <ol>
+ * <li>`fromString: String => V` - convert the found value from a String to the correct type.</li>
+ * </ol>
  */
 case class OptWithValue[V](
   name:    String,
@@ -121,11 +141,8 @@ case class OptWithValue[V](
 /**
  * An option that is just a flag, with no value. By default, its presence
  * indicates "true" for the corresponding option and if the flag isn't specified
- * by the user, then "false" is indicated. However, you can flip the sense of
- * the flag by calling `Flag.reverseSense(...)`.
- * @param name:       String       Used as a map key in the returned options. Cannot be empty.
- * @param flags:      Seq[String]  The flags marking the option. One or two "-" required for each.
- * @param help:       String       Help string displayed if user asks for help. Can be empty.
+ * by the user, then "false" is indicated. However, you can construct a `Flag`
+ * with the sense "flipped" using `Flag.reverseSense()`.
  */
 case class Flag (
   name:    String,
@@ -139,7 +156,12 @@ case class Flag (
     }
 }
 
+/** Companion object for `Flag`. */
 object Flag {
+  /**
+   * Like `apply`, but the value is "flipped"; it defaults to `true`, but if the
+   * user supplies the flag, the value is `false`.
+   */
   def reverseSense(
   name:    String,
   flags:   Seq[String],

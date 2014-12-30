@@ -107,7 +107,7 @@ class OptSpec extends FunSpec {
     }
   }
 
-  describe ("Flag") {
+  describe ("case class Flag") {
     it ("requires a non-empty name") {
       intercept [IllegalArgumentException] {
         Flag(
@@ -132,47 +132,34 @@ class OptSpec extends FunSpec {
     }
 
     it ("does not consume any values in the argument list.") {
-      val flag = Flag(
-        name    = "help",
-        flags   = Seq("-h", "--h", "--help"),
-        help    = "help message")
-      val result = flag.parser(Seq("--help", "one", "two"))
+      val result = Opt.helpFlag.parser(Seq("--help", "one", "two"))
       assert(Seq("one", "two")   === result._2)
     }
 
     it ("returns true if the option is used.") {
-      val flag = Flag(
-        name    = "help",
-        flags   = Seq("-h", "--h", "--help"),
-        help    = "help message")
-      val result = flag.parser(Seq("--help", "one", "two"))
+      val result = Opt.helpFlag.parser(Seq("--help", "one", "two"))
       assert(("help", true) === result._1)
     }
+  }
 
-    describe ("Flag.reverseSense") {
+  describe ("object Flag") {
+    val antihelp = Flag.reverseSense(
+      name    = "antihelp",
+      flags   = Seq("-a", "--ah", "--antihelp"),
+      help    = "anti help message")
+
+    describe ("reverseSense") {
       it ("supports a reverse sense option with Flag.reverseSense") {
-        val flag = Flag.reverseSense(
-          name    = "antihelp",
-          flags   = Seq("-a", "--ah", "--antihelp"),
-          help    = "anti help message")
-        assert(flag.default === Some(true))
+        assert(antihelp.default === Some(true))
       }
 
       it ("does not consume any values in the argument list.") {
-        val flag = Flag.reverseSense(
-          name    = "antihelp",
-          flags   = Seq("-a", "--ah", "--antihelp"),
-          help    = "anti help message")
-        val result = flag.parser(Seq("--antihelp", "one", "two"))
+        val result = antihelp.parser(Seq("--antihelp", "one", "two"))
         assert(Seq("one", "two")   === result._2)
       }
 
       it ("returns false if the option is used.") {
-        val flag = Flag.reverseSense(
-          name    = "antihelp",
-          flags   = Seq("-a", "--ah", "--antihelp"),
-          help    = "anti help message")
-        val result = flag.parser(Seq("--antihelp", "one", "two"))
+        val result = antihelp.parser(Seq("--antihelp", "one", "two"))
         assert(("antihelp", false) === result._1)
       }
     }

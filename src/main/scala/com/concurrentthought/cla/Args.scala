@@ -1,6 +1,6 @@
 package com.concurrentthought.cla
-import scala.util.{Try, Success, Failure}
 import scala.util.control.NonFatal
+import java.io.PrintStream
 
 /**
  * Contains the options defined, the current values, which are the defaults
@@ -16,6 +16,8 @@ case class Args protected (
   defaults: Map[String,Any] = Map.empty,
   values: Map[String,Any] = Map.empty,
   failures: Seq[(String,Any)] = Nil) {
+
+  def optsWithHelp = Opt.helpFlag +: opts
 
   private val helpParser: Opt.Parser[Any] = Opt.helpFlag.parser
 
@@ -47,7 +49,47 @@ case class Args protected (
 
   import scala.reflect.ClassTag
 
-  def get[V : ClassTag](flag: String): Option[V] = values.get(flag).map(_.asInstanceOf[V])
+  def get[V : ClassTag](flag: String): Option[V] =
+    values.get(flag).map(_.asInstanceOf[V])
+
+  def getOrElse[V : ClassTag](flag: String, orElse: V): V =
+    values.getOrElse(flag, orElse).asInstanceOf[V]
+
+  /**
+   * Print the current values. Before any parsing is done, they values are
+   * the defaults. After parsing, they are the defaults overridden by any
+   * user-supplied options.
+   */
+  def printValues(help: Help, out: PrintStream = Console.out): Unit = {
+    out.println("Command line arguments:")
+    val keys = values.keySet.toSeq.sorted
+    val max = keys.maxBy(_.size).size
+    val fmt = s"  %${max}s: %s"
+    keys.foreach(key => out.println(fmt.format(key, values(key))))
+  }
+
+  /**
+   * Was the help option invoked?
+   * If so, print the help message to the output `PrintStream` and return true.
+   * Otherwise, return false. Callers may wish to exit if true is returned.
+   */
+  def handleHelp(help: Help, out: PrintStream = Console.out): Boolean =
+    get[Boolean]("help") match {
+      case Some(true) => out.println(help(this)); true
+      case _ => false
+    }
+
+  /**
+   * Were errors found in the argument list?
+   * If so, print the error messages, followed by the  help message and return true.
+   * Otherwise, return false. Callers may wish to exit if true is returned.
+   */
+  def handleErrors(help: Help, out: PrintStream = Console.err): Boolean =
+    if (failures.size > 0) {
+      out.println(help(this))
+      true
+    }
+    else false
 
   /** No match! */
   protected val noMatch: Opt.Parser[Any] = {
@@ -67,7 +109,7 @@ object Args {
 
   def apply(opts: Seq[Opt[_]], defaults: Map[String,Any], values: Map[String,Any]): Args = {
     val defaults2 = defaults + ("help" -> defaults.getOrElse("help", false))
-    val valuesHelp = values.getOrElse("help", defaults2.get("help"))
+    val valuesHelp = values.getOrElse("help", defaults2("help"))
     val values2   = values   + ("help" -> valuesHelp)
     new Args(Opt.helpFlag +: opts, defaults2, values2)
   }
@@ -83,31 +125,6 @@ object Args {
 
   def defaults(opts: Seq[Opt[_]]): Map[String,Any] =
     opts.filter(_.default != None).map(o => (o.name, o.default.get)).toMap
-
-  // def formatFailures(failures: Seq[(String,Any)]): Seq[String] = { Nil }
-  //   val (unrecognized, others) failures partition {
-  //     case ua: UnrecognizedArgument => true
-  //     case _ => false
-  //   }
-  //   val unrecognizedStr = unrecognized.size match {
-  //     case 0 => ""
-  //     case 1 =>
-  //       val (flag, rest) = unrecognized.head "Unrecognized argument (or missing value)"
-  //   }
-  //   val unrecognizedPlural = if (unrecognized.size > 1) "s" else ""
-  //   val unrecognizedStr = unrecognized foldLeft "Unrecognized arguments (or missing value)"
-  //   match {
-  //   case Nil => Nil
-  //   case (flag, error) +: tail =>
-  //     error match {
-  //       case th: Throwable => th.getMessage +: formatFailures(tail)
-  //       case _ => error.toString +: formatFailures(tail)
-  //     }
-  // }
-  //     s"""$arg is an unrecognized argument (or a required value is missing)${restOfArgs(rest)}""")
-
-  // private def restOfArgs(rest: Seq[String]) =
-  //   if (rest.size == 0) " (end of arguments)" else s""" (rest of arguments: ${rest.mkString(" ")})"""
 }
 
 
