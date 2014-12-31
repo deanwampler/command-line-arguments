@@ -1,5 +1,6 @@
 package com.concurrentthought.cla
 import scala.util.control.NonFatal
+import scala.util.{Try, Success, Failure}
 import java.io.PrintStream
 
 /**
@@ -30,13 +31,14 @@ case class Args protected (
       case Nil => Nil
       case seq => try {
         parserChain(seq) match {
-          case ((flag, value), tail) => (flag, value) +: p(tail)
+          case ((flag, Success(value)), tail) => (flag, value) +: p(tail)
+          case ((flag, Failure(failure)), tail) => (flag, failure) +: p(tail)
         }
       } catch {
-          case e @ Args.UnrecognizedArgument(head, tail) => (head, e) +: p(tail)
-          // Otherwise, assume that attempting to parse the value failed, so
-          // we skip to seq.tail.tail.
-          case NonFatal(nf) => (seq.head, nf) +: p(seq.tail.tail)
+        case e @ Args.UnrecognizedArgument(head, tail) => (head, e) +: p(tail)
+        // Otherwise, assume that attempting to parse the value failed, so
+        // we skip to seq.tail.tail.
+        case NonFatal(nf) => (seq.head, nf) +: p(seq.tail.tail)
       }
     }
 

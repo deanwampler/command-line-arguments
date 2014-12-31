@@ -54,15 +54,15 @@ class ArgsSpec extends FunSpec {
         "--double", "2_2",
         "--seq",    "a:b_c-d"))
       val failures = List(
-        ("--byte",   nfe("z")),
-        ("--char",   new StringIndexOutOfBoundsException(0)),
-        ("--int",    nfe("z")),
-        ("--long",   nfe("z")),
-        ("--float",  nfe("z")),
-        ("--float",  nfe("1_2")),
-        ("--double", nfe("z")),
-        ("--double", nfe("2_2")),
-        ("--seq",    nfe("a")))
+        ("byte",   ivs("--byte",   "z",       Some(nfe("z")))),
+        ("char",   ivs("--char",   "",        Some(new StringIndexOutOfBoundsException(0)))),
+        ("int",    ivs("--int",    "z",       Some(nfe("z")))),
+        ("long",   ivs("--long",   "z",       Some(nfe("z")))),
+        ("float",  ivs("--float",  "z",       Some(nfe("z")))),
+        ("float",  ivs("--float",  "1_2",     Some(nfe("1_2")))),
+        ("double", ivs("--double", "z",       Some(nfe("z")))),
+        ("double", ivs("--double", "2_2",     Some(nfe("2_2")))),
+        ("seq",    ivs("--seq",    "a:b_c-d", Some(nfe("a")))))
 
       assert(args.values === args.defaults)
       args.failures zip failures foreach { case ((flag1,ex1), (flag2,ex2)) =>
@@ -149,7 +149,7 @@ class ArgsSpec extends FunSpec {
           |    help: true
           |     int: 4
           |    long: 5
-          |     seq: ArraySeq(111.3, 126.2, 123.4, 354.6)
+          |     seq: Vector(111.3, 126.2, 123.4, 354.6)
           |  string: hello
           |""".stripMargin
         assert(out.toString === expected)
@@ -200,6 +200,8 @@ class ArgsSpec extends FunSpec {
   }
 
   private def nfe(s: String) = new NumberFormatException("For input string: \"%s\"".format(s))
+  private def ivs(flag: String, value: String, ex: Option[RuntimeException] = None) = 
+    Opt.InvalidValueString(flag, value, ex)
 
   private def all: (Args, Map[String,Any]) = {
     val args = Args(allOpts).parse(Array(

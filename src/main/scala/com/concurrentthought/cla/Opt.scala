@@ -1,4 +1,5 @@
 package com.concurrentthought.cla
+import scala.util.{Try, Success, Failure}
 
 /**
  * Abstraction or a command-line option, with or without a corresponding value.
@@ -28,16 +29,38 @@ object Opt {
    * If successful, it returns the option's name and extracted value as a tuple,
    * along with the rest of the arguments.
    */
-  type Parser[V] = PartialFunction[Seq[String], ((String,V), Seq[String])]
+  type Parser[V] = PartialFunction[Seq[String], ((String, Try[V]), Seq[String])]
+
+  /**
+   * Lift `String => V` to `String => Try[V]`.
+   */   
+  def toTry[V](to: String => V): String => Try[V] = s => Try(to(s))
+
+  /**
+   * Exception raised when an invalid value string is given. Not all errors
+   * are detected and reported this way. For example, calls to `s.toInt` for 
+   * an invalid string will result in `NumberFormatException`.
+   */
+  case class InvalidValueString(
+    flag: String, valueMessage: String, cause: Option[Throwable] = None) 
+    extends RuntimeException(s"$valueMessage for option $flag",
+      if (cause == None) null else cause.get) {
+
+      /** Override toString to show a nicer name for the exception than the FQN. */
+      override def toString = {
+        val causeStr = if (cause == None) "" else s" (cause: ${cause.get})"
+        "InvalidValueString: " + getMessage + causeStr
+      }
+    }
 
   def apply[V](
     name:    String,
     flags:   Seq[String],
     help:    String = "",
-    default: Option[V] = None)(fromString: String => V) =
+    default: Option[V] = None)(fromString: String => Try[V]) =
       OptWithValue(name, flags, help, default)(fromString)
 
-  // Common options
+  // Common options.
 
   /** Show Help. Normally the program will exit afterwards. */
   val helpFlag = Flag(
@@ -46,59 +69,84 @@ object Opt {
     help   = "Show this help message.")
 
   /** Minimize logging and other output. */
-  val quiet = Flag(
+  val quietFlag = Flag(
     name  = "quiet",
     flags = Seq("-q", "--quiet"),
     help  = "Minimize output messages.")
 
+  /** Socket host and port. */
+  val socketFlag = Opt[(String,Int)](
+    name  = "socket",
+    flags = Seq("-s", "--socket"),
+    help  = "Socket host:port.") { s => 
+      val array = s.split(":")
+      if (array.length != 2) Failure(InvalidValueString("--socket", s))
+      else {
+        val host = array(0)
+        Try(array(1).toInt) match {
+          case Success(port) => Success(host -> port)
+          case Failure(th)   => Failure(InvalidValueString("--socket", s"$s (not an int?)", Some(th)))
+        }
+      }
+    }
+
+  // Helper methods to create options.
+  
   /** Create a String option */
   def string(
     name:    String,
     flags:   Seq[String],
     help:    String = "",
-    default: Option[String] = None) = apply(name, flags, help, default)(identity)
+    default: Option[String] = None) = apply(name, flags, help, default)(
+      toTry(identity))
 
   /** Create a Char option. Just takes the first character in the value string. */
   def char(
     name:    String,
     flags:   Seq[String],
     help:    String = "",
-    default: Option[Char] = None) = apply(name, flags, help, default)(_(0))
+    default: Option[Char] = None) = apply(name, flags, help, default)(
+      toTry(_(0)))
 
   /** Create a Byte option. */
   def byte(
     name:    String,
     flags:   Seq[String],
     help:    String = "",
-    default: Option[Byte] = None) = apply(name, flags, help, default)(_.toByte)
+    default: Option[Byte] = None) = apply(name, flags, help, default)(
+      toTry(_.toByte))
 
   /** Create an Int option. */
   def int(
     name:    String,
     flags:   Seq[String],
     help:    String = "",
-    default: Option[Int] = None) = apply(name, flags, help, default)(_.toInt)
+    default: Option[Int] = None) = apply(name, flags, help, default)(
+      toTry(_.toInt))
 
   /** Create a Long option. */
   def long(
     name:    String,
     flags:   Seq[String],
     help:    String = "",
-    default: Option[Long] = None) = apply(name, flags, help, default)(_.toLong)
+    default: Option[Long] = None) = apply(name, flags, help, default)(
+      toTry(_.toLong))
 
   /** Create a Float option. */
   def float(
     name:    String,
     flags:   Seq[String],
     help:    String = "",
-    default: Option[Float] = None) = apply(name, flags, help, default)(_.toFloat)
+    default: Option[Float] = None) = apply(name, flags, help, default)(
+      toTry(_.toFloat))
 
   /** Create a Double option. */
   def double(
     name:    String,
     flags:   Seq[String],
     help:    String = "",
-    default: Option[Double] = None) = apply(name, flags, help, default)(_.toDouble)
+    default: Option[Double] = None) = apply(name, flags, help, default)(
+      toTry(_.toDouble))
 
   /**
    * Create an option where the value string represents a sequence with a delimiter.
@@ -113,10 +161,25 @@ object Opt {
     name:      String,
     flags:     Seq[String],
     help:      String = "",
-    default:   Option[Seq[V]] = None)(fromString: String => V) = {
+    default:   Option[Seq[V]] = None)(fromString: String => Try[V]) = {
       require (delimsRE.trim.length > 0, "The delimiters RE string can't be empty.")
-      apply(name, flags, help, default) (_.split(delimsRE) map fromString)
+      apply(name, flags, help, default) {
+        s => seqSupport(name, s, delimsRE, fromString)
+      }
     }
+
+  private def seqSupport[V](name: String, str: String, delimsRE: String,
+    fromString: String => Try[V]): Try[Seq[V]] = {
+    def f(strs: Seq[String], vect: Vector[V]): Try[Vector[V]] = strs match {
+      case head +: tail => fromString(head) match {
+        case Success(value) => f(tail, vect :+ value)
+        case Failure(ex) => Failure(ex)
+      }
+      case Nil => Success(vect)
+    }
+    f(str.split(delimsRE), Vector.empty[V])
+  }
+
 }
 
 /**
@@ -130,11 +193,16 @@ case class OptWithValue[V](
   name:    String,
   flags:   Seq[String],
   help:    String = "",
-  default: Option[V] = None)(fromString: String => V) extends Opt[V] {
+  default: Option[V] = None)(fromString: String => Try[V]) extends Opt[V] {
 
   val parser: Opt.Parser[V] = {
-    case flag +: value +: tail if flags.contains(flag) =>
-      ((name, fromString(value)), tail)
+    case flag +: value +: tail if flags.contains(flag) => fromString(value) match {
+      case sv @ Success(v)  => ((name, sv), tail)
+      case Failure(ex) => ex match {
+        case ivs: Opt.InvalidValueString => ((name, Failure(ivs)), tail)
+        case ex => ((name, Failure(Opt.InvalidValueString(flag, value, Some(ex)))), tail)
+      }
+    }
   }
 }
 
@@ -152,7 +220,7 @@ case class Flag (
     val default = Some(false)
 
     val parser: Opt.Parser[Boolean] = {
-      case flag +: tail if flags.contains(flag) => ((name, !default.get), tail)
+      case flag +: tail if flags.contains(flag) => ((name, Try(!default.get)), tail)
     }
 }
 

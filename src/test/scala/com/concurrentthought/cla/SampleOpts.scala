@@ -49,7 +49,7 @@ object SampleOpts {
     name     = "seq",
     flags    = Seq("-s", "--s", "--seq"),
     help     = "seq help message",
-    default  = Some(Nil))(_.toDouble)
+    default  = Some(Nil))(Opt.toTry(_.toDouble))
 
   val allOpts = Seq(stringOpt, charOpt, byteOpt, intOpt, longOpt, floatOpt, doubleOpt, seqOpt)
   val allDefaults = allOpts.map(o => (o.name, o.default.get)).toMap + ("help" -> false)

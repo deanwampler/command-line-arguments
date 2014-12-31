@@ -26,7 +26,7 @@ object SampleMain {
       delimsRE = "[:;]",
       name     = "path",
       flags    = Seq("-p", "--path"),
-      help     = "Path elements.")(_.toString)
+      help     = "Path elements.")(Opt.toTry(_.toString))
 
     val args = Args(Seq(input, output, path, logLevel)).parse(argstrings)
     val help = Help("run-main SampleMain", "Demonstrates the CLA API.")

@@ -6,17 +6,17 @@ class HelpSpec extends FunSpec {
 
   describe ("Help") {
     it ("returns a help string based on the command-line arguments") {
-      val in = Opt[String](
+      val in = Opt.string(
         name    = "in",
         flags   = Seq("-i", "--in", "--input"),
         help    = "Input files with an extremely long help message that should be wrapped by Help so it doesn't run off the screen like it does in this test source file!",
-        default = Some("/data/input"))(identity)
-      val out = Opt[String](
+        default = Some("/data/input"))
+      val out = Opt.string(
         name    = "out",
         flags   = Seq("-o", "--o", "--out", "--output"),
         help    = "Output files.",
-        default = Some("/dev/null"))(identity)
-      val args = Args(Seq(in, out, Opt.quiet))
+        default = Some("/dev/null"))
+      val args = Args(Seq(in, out, Opt.quietFlag))
       val help = Help("java HelpSpec", "A ScalaTest for the Help class.")
 
       assert(help(args) ===
@@ -52,7 +52,7 @@ class HelpSpec extends FunSpec {
         |A ScalaTest for no user-defined options.
         |The following parsing errors occurred:
         |  UnrecognizedArgument (or missing value): --foo (rest of arguments: --int x)
-        |  java.lang.NumberFormatException: For input string: "x"
+        |  InvalidValueString: x for option --int (cause: java.lang.NumberFormatException: For input string: "x")
         |Where the supported options are the following:
         |  -h | --h | --help    Show this help message.
         |  -i | --i | --int     int help message
