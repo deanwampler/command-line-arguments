@@ -6,10 +6,26 @@ class ArgsSpec extends FunSpec {
 
   describe ("case class Args") {
     describe ("empty list of options") {
-      it ("still supports help") {
+      it ("still includes help") {
         assert(Args.empty.parse(Array("--help")) ===
           Args(Args.defaultProgramInvocation, Args.defaultDescription,
             Nil, Map("help" -> false), Map("help" -> true)))
+      }
+      it ("but the default help can be overridden, as long as the option has the name field \"help\".") {
+        val altHelp = Flag(
+          name   = "help",
+          flags  = Seq("-H", "--H", "--HELP"),
+          help   = "Show this HELP message.")
+        val args = Args(opts = Seq(altHelp))
+        assert(args.opts === Seq(altHelp))
+        // before parsing:
+        assert(args === 
+          Args(Args.defaultProgramInvocation, Args.defaultDescription,
+            Seq(altHelp), Map("help" -> false), Map("help" -> false)))
+        // after parsing:
+        assert(args.parse(Array("--HELP")) ===
+          Args(Args.defaultProgramInvocation, Args.defaultDescription,
+            Seq(altHelp), Map("help" -> false), Map("help" -> true)))
       }
     }
 

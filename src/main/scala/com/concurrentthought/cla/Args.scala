@@ -19,22 +19,11 @@ case class Args protected (
   defaults: Map[String,Any],
   values: Map[String,Any],
   failures: Seq[(String,Any)]) {
-  // programInvocation: String = Args.defaultProgramInvocation,
-  // description: String = Args.defaultDescription,
-  // opts: Seq[Opt[_]] = Nil,
-  // defaults: Map[String,Any] = Map.empty,
-  // values: Map[String,Any] = Map.empty,
-  // failures: Seq[(String,Any)] = Nil) {
-
-  def optsWithHelp = Opt.helpFlag +: opts
 
   def help: String = Help(this)
 
-  private val helpParser: Opt.Parser[Any] = Opt.helpFlag.parser
-
-  lazy val parserChain: Opt.Parser[Any] = (opts foldLeft helpParser) {
-      (partialfunc, opt) => partialfunc orElse opt.parser
-    } orElse noMatch
+  lazy val parserChain: Opt.Parser[Any] = 
+    opts map (_.parser) reduceLeft (_ orElse _) orElse noMatch
 
   def parse(args: Seq[String]): Args = {
     def p(args2: Seq[String]): Seq[(String, Any)] = args2 match {
@@ -143,12 +132,13 @@ object Args {
     opts: Seq[Opt[_]], 
     defaults: Map[String,Any], 
     values: Map[String,Any]): Args = {
+      val opts2      = if (opts.exists(_.name == "help")) opts else (Opt.helpFlag +: opts)
       val defaults2  = defaults + ("help" -> defaults.getOrElse("help", false))
       val valuesHelp = values.getOrElse("help", defaults2("help"))
       val values2    = values   + ("help" -> valuesHelp)
       val failures   = Seq.empty[(String,Any)]
 
-      new Args(programInvocation, description, Opt.helpFlag +: opts, defaults2, values2, failures)
+      new Args(programInvocation, description, opts2, defaults2, values2, failures)
     }
 
   case class UnrecognizedArgument(arg: String, rest: Seq[String])
