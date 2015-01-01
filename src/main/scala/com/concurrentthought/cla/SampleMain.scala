@@ -1,6 +1,4 @@
 import com.concurrentthought.cla._
-import scala.util.control.NonFatal
-import java.io.PrintStream
 
 /**
  * Demonstrates how to use the API. Try running with different arguments,
