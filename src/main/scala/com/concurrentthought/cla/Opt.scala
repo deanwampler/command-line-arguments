@@ -169,6 +169,16 @@ object Opt {
       }
     }
 
+  /** 
+   * A helper method when the substrings are returned without further processing required.
+   */
+  def seqString(delimsRE:  String)(
+    name:      String,
+    flags:     Seq[String],
+    default:   Option[Seq[String]] = None,
+    help:      String = "") = 
+      seq[String](delimsRE)(name, flags, default, help)(toTry(_.toString))
+
   private def seqSupport[V](name: String, str: String, delimsRE: String,
     fromString: String => Try[V]): Try[Seq[V]] = {
     def f(strs: Seq[String], vect: Vector[V]): Try[Vector[V]] = strs match {
