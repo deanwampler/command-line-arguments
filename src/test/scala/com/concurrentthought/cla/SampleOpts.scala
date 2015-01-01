@@ -50,6 +50,13 @@ object SampleOpts {
     default  = Some(Nil),
     help     = "seq help message")(Opt.toTry(_.toDouble))
 
-  val allOpts = Seq(stringOpt, charOpt, byteOpt, intOpt, longOpt, floatOpt, doubleOpt, seqOpt)
+
+  val seqStringOpt = Opt.seqString(delimsRE = "[-_:]")(
+    name     = "seq-string",
+    flags    = Seq("-ss", "--ss", "--seq-string"),
+    default  = Some(Nil),
+    help     = "seq-string help message")
+
+  val allOpts = Seq(stringOpt, charOpt, byteOpt, intOpt, longOpt, floatOpt, doubleOpt, seqOpt, seqStringOpt)
   val allDefaults = allOpts.map(o => (o.name, o.default.get)).toMap + ("help" -> false)
 }

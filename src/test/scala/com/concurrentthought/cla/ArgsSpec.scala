@@ -132,15 +132,16 @@ class ArgsSpec extends FunSpec {
         val out = new StringOut
         args.printValues(out.out)
         val expected = """Command line arguments:
-          |    byte: 0
-          |    char: x
-          |  double: 0.0
-          |   float: 0.0
-          |    help: false
-          |     int: 0
-          |    long: 0
-          |     seq: List()
-          |  string: foobar
+          |        byte: 0
+          |        char: x
+          |      double: 0.0
+          |       float: 0.0
+          |        help: false
+          |         int: 0
+          |        long: 0
+          |         seq: List()
+          |  seq-string: List()
+          |      string: foobar
           |""".stripMargin
         assert(out.toString === expected)
       }
@@ -148,26 +149,28 @@ class ArgsSpec extends FunSpec {
       it ("prints the default values overridden by user-specified options after parsing is done") {
         val args = Args(opts = allOpts).parse(Array(
           "--help",
-          "--string", "hello",
-          "--byte",   "3",
-          "--char",   "abc",
-          "--int",    "4",
-          "--long",   "5",
-          "--float",  "1.1",
-          "--double", "2.2",
-          "--seq",    "111.3:126.2_123.4-354.6"))
+          "--string",     "hello",
+          "--byte",       "3",
+          "--char",       "abc",
+          "--int",        "4",
+          "--long",       "5",
+          "--float",      "1.1",
+          "--double",     "2.2",
+          "--seq",        "111.3:126.2_123.4-354.6",
+          "--seq-string", "a:b_c-d"))
         val out = new StringOut
         args.printValues(out.out)
         val expected = """Command line arguments:
-          |    byte: 3
-          |    char: a
-          |  double: 2.2
-          |   float: 1.1
-          |    help: true
-          |     int: 4
-          |    long: 5
-          |     seq: Vector(111.3, 126.2, 123.4, 354.6)
-          |  string: hello
+          |        byte: 3
+          |        char: a
+          |      double: 2.2
+          |       float: 1.1
+          |        help: true
+          |         int: 4
+          |        long: 5
+          |         seq: Vector(111.3, 126.2, 123.4, 354.6)
+          |  seq-string: Vector(a, b, c, d)
+          |      string: hello
           |""".stripMargin
         assert(out.toString === expected)
       }
@@ -222,24 +225,26 @@ class ArgsSpec extends FunSpec {
 
   private def all: (Args, Map[String,Any]) = {
     val args = Args(opts = allOpts).parse(Array(
-      "--string", "hello",
-      "--byte",   "3",
-      "--char",   "abc",
-      "--int",    "4",
-      "--long",   "5",
-      "--float",  "1.1",
-      "--double", "2.2",
-      "--seq",    "111.3:126.2_123.4-354.6"))
+      "--string",     "hello",
+      "--byte",       "3",
+      "--char",       "abc",
+      "--int",        "4",
+      "--long",       "5",
+      "--float",      "1.1",
+      "--double",     "2.2",
+      "--seq",        "111.3:126.2_123.4-354.6",
+      "--seq-string", "a:b_c-d"))
     val values = Map[String,Any](
-      "help"   -> false,
-      "string" -> "hello",
-      "byte"   ->   3,
-      "char"   -> 'a',
-      "int"    ->   4,
-      "long"   ->   5,
-      "float"  -> 1.1F,
-      "double" -> 2.2,
-      "seq"    -> Seq(111.3, 126.2, 123.4, 354.6))
+      "help"       -> false,
+      "string"     -> "hello",
+      "byte"       ->   3,
+      "char"       -> 'a',
+      "int"        ->   4,
+      "long"       ->   5,
+      "float"      -> 1.1F,
+      "double"     -> 2.2,
+      "seq"        -> Seq(111.3, 126.2, 123.4, 354.6),
+      "seq-string" -> Vector("a", "b", "c", "d"))
     (args, values)
   }
 }

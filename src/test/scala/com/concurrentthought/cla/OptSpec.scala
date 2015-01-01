@@ -239,6 +239,13 @@ class OptSpec extends FunSpec {
         }
       }
     }
+
+    describe ("seqString() constructs a Seq[String] option") {
+      it ("splits the string into a Seq[String]") {
+        val result = seqStringOpt.parser(Seq("--seq-string", "111.3:126.2_123.4-354.6", "one", "two"))
+        assert((("seq-string", Try(Seq("111.3", "126.2", "123.4", "354.6"))), Seq("one", "two")) === result)
+      }
+    }
   }
 
   describe ("case class Flag") {
