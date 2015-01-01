@@ -7,13 +7,14 @@ class ArgsSpec extends FunSpec {
   describe ("case class Args") {
     describe ("empty list of options") {
       it ("still supports help") {
-        assert(Args(Nil).parse(Array("--help")) ===
-          Args(Nil, Map("help" -> false), Map("help" -> true)))
+        assert(Args.empty.parse(Array("--help")) ===
+          Args(Args.defaultProgramInvocation, Args.defaultDescription,
+            Nil, Map("help" -> false), Map("help" -> true)))
       }
     }
 
     it ("contains a list of invalid options after parsing") {
-      val args = Args(Nil).parse(Array("--foo", "-b"))
+      val args = Args.empty.parse(Array("--foo", "-b"))
       assert(args.values === Map("help" -> false))
       val expected = List(
         ("--foo", Args.UnrecognizedArgument("--foo", Seq("-b"))),
@@ -33,7 +34,7 @@ class ArgsSpec extends FunSpec {
     }
 
     it ("contains all the valid options matched and the failures for invalid options") {
-      val args = Args(allOpts).parse(Array("--foo", "--string", "hello", "-b"))
+      val args = Args(opts = allOpts).parse(Array("--foo", "--string", "hello", "-b"))
       val values = allDefaults + ("string" -> "hello")
       assert(args.values === values)
       val failures = List(
@@ -43,7 +44,7 @@ class ArgsSpec extends FunSpec {
     }
 
     it ("contains failures when argument values are not parseable to the correct type") {
-      val args = Args(allOpts).parse(Array(
+      val args = Args(opts = allOpts).parse(Array(
         "--byte",   "z",
         "--char",   "",
         "--int",    "z",
@@ -73,7 +74,7 @@ class ArgsSpec extends FunSpec {
     }
 
     it ("contains failures when an option is at the end of the list without a required value") {
-      val args = Args(allOpts)
+      val args = Args(opts = allOpts)
       Seq("--byte", "--char", "--int", "--long", "--float", "--float", "--double", "--double", "--seq") foreach { flag =>
         val args2 = args.parse(Array(flag))
         assert(args2.defaults === allDefaults)
@@ -111,9 +112,9 @@ class ArgsSpec extends FunSpec {
 
     describe ("printValues") {
       it ("prints the default values before any parsing is done") {
-        val args = Args(allOpts)
+        val args = Args(opts = allOpts)
         val out = new StringOut
-        args.printValues(Help(), out.out)
+        args.printValues(out.out)
         val expected = """Command line arguments:
           |    byte: 0
           |    char: x
@@ -129,7 +130,7 @@ class ArgsSpec extends FunSpec {
       }
 
       it ("prints the default values overridden by user-specified options after parsing is done") {
-        val args = Args(allOpts).parse(Array(
+        val args = Args(opts = allOpts).parse(Array(
           "--help",
           "--string", "hello",
           "--byte",   "3",
@@ -140,7 +141,7 @@ class ArgsSpec extends FunSpec {
           "--double", "2.2",
           "--seq",    "111.3:126.2_123.4-354.6"))
         val out = new StringOut
-        args.printValues(Help(), out.out)
+        args.printValues(out.out)
         val expected = """Command line arguments:
           |    byte: 3
           |    char: a
@@ -158,42 +159,42 @@ class ArgsSpec extends FunSpec {
 
     describe ("handleHelp") {
       it ("does nothing before any arguments have been parsed") {
-        val args = Args(allOpts)
+        val args = Args(opts = allOpts)
         val out = new StringOut
-        args.handleHelp(Help(), out.out)
+        args.handleHelp(out.out)
         assert(out.toString.length === 0, out.toString)
       }
       it ("does nothing if help wasn't requested") {
-        val args = Args(allOpts).parse(Array[String]())
+        val args = Args(opts = allOpts).parse(Array[String]())
         val out = new StringOut
-        args.handleHelp(Help(), out.out)
+        args.handleHelp(out.out)
         assert(out.toString.length === 0, out.toString)
       }
       it ("prints to the out PrintStream") {
-        val args = Args(allOpts).parse(Array("--help"))
+        val args = Args(opts = allOpts).parse(Array("--help"))
         val out = new StringOut
-        args.handleHelp(Help(), out.out)
+        args.handleHelp(out.out)
         assert(out.toString.length > 0)
       }
     }
 
     describe ("handleErrors") {
       it ("does nothing before any arguments have been parsed") {
-        val args = Args(allOpts)
+        val args = Args(opts = allOpts)
         val out = new StringOut
-        args.handleErrors(Help(), out.out)
+        args.handleErrors(out.out)
         assert(out.toString.length === 0, out.toString)
       }
       it ("does nothing if no parsing errors occurred") {
-        val args = Args(allOpts).parse(Array("--help"))
+        val args = Args(opts = allOpts).parse(Array("--help"))
         val out = new StringOut
-        args.handleErrors(Help(), out.out)
+        args.handleErrors(out.out)
         assert(out.toString.length === 0, out.toString)
       }
       it ("prints to the out PrintStream if errors occurred") {
-        val args = Args(allOpts).parse(Array("--xxx"))
+        val args = Args(opts = allOpts).parse(Array("--xxx"))
         val out = new StringOut
-        args.handleErrors(Help(), out.out)
+        args.handleErrors(out.out)
         assert(out.toString.length > 0)
       }
     }
@@ -204,7 +205,7 @@ class ArgsSpec extends FunSpec {
     Opt.InvalidValueString(flag, value, ex)
 
   private def all: (Args, Map[String,Any]) = {
-    val args = Args(allOpts).parse(Array(
+    val args = Args(opts = allOpts).parse(Array(
       "--string", "hello",
       "--byte",   "3",
       "--char",   "abc",

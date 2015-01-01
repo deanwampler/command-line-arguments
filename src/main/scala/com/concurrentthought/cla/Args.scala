@@ -13,12 +13,22 @@ import java.io.PrintStream
  * new, updated instances.
  */
 case class Args protected (
+  programInvocation: String,
+  description: String,
   opts: Seq[Opt[_]],
-  defaults: Map[String,Any] = Map.empty,
-  values: Map[String,Any] = Map.empty,
-  failures: Seq[(String,Any)] = Nil) {
+  defaults: Map[String,Any],
+  values: Map[String,Any],
+  failures: Seq[(String,Any)]) {
+  // programInvocation: String = Args.defaultProgramInvocation,
+  // description: String = Args.defaultDescription,
+  // opts: Seq[Opt[_]] = Nil,
+  // defaults: Map[String,Any] = Map.empty,
+  // values: Map[String,Any] = Map.empty,
+  // failures: Seq[(String,Any)] = Nil) {
 
   def optsWithHelp = Opt.helpFlag +: opts
+
+  def help: String = Help(this)
 
   private val helpParser: Opt.Parser[Any] = Opt.helpFlag.parser
 
@@ -62,7 +72,7 @@ case class Args protected (
    * the defaults. After parsing, they are the defaults overridden by any
    * user-supplied options.
    */
-  def printValues(help: Help, out: PrintStream = Console.out): Unit = {
+  def printValues(out: PrintStream = Console.out): Unit = {
     out.println("Command line arguments:")
     val keys = values.keySet.toSeq.sorted
     val max = keys.maxBy(_.size).size
@@ -75,9 +85,9 @@ case class Args protected (
    * If so, print the help message to the output `PrintStream` and return true.
    * Otherwise, return false. Callers may wish to exit if true is returned.
    */
-  def handleHelp(help: Help, out: PrintStream = Console.out): Boolean =
+  def handleHelp(out: PrintStream = Console.out): Boolean =
     get[Boolean]("help") match {
-      case Some(true) => out.println(help(this)); true
+      case Some(true) => out.println(help); true
       case _ => false
     }
 
@@ -86,9 +96,9 @@ case class Args protected (
    * If so, print the error messages, followed by the  help message and return true.
    * Otherwise, return false. Callers may wish to exit if true is returned.
    */
-  def handleErrors(help: Help, out: PrintStream = Console.err): Boolean =
+  def handleErrors(out: PrintStream = Console.err): Boolean =
     if (failures.size > 0) {
-      out.println(help(this))
+      out.println(help)
       true
     }
     else false
@@ -101,20 +111,45 @@ case class Args protected (
 
 object Args {
 
+  val defaultProgramInvocation: String = "java -cp ..."
+  val defaultDescription: String = ""
+
+  def empty: Args = {
+      apply(Args.defaultProgramInvocation, Args.defaultDescription, Nil)
+    }
+
   def apply(opts: Seq[Opt[_]]): Args = {
-    def defs = defaults(opts)
-    apply(opts, defs, defs)
-  }
+      apply(Args.defaultProgramInvocation, Args.defaultDescription, opts)
+    }
 
-  def apply(opts: Seq[Opt[_]], defaults: Map[String,Any]): Args =
-    apply(opts, defaults, defaults)
+  def apply(
+    programInvocation: String,
+    description: String,
+    opts: Seq[Opt[_]]): Args = {
+      def defs = defaults(opts)
+      apply(programInvocation, description, opts, defs, defs)
+    }
 
-  def apply(opts: Seq[Opt[_]], defaults: Map[String,Any], values: Map[String,Any]): Args = {
-    val defaults2 = defaults + ("help" -> defaults.getOrElse("help", false))
-    val valuesHelp = values.getOrElse("help", defaults2("help"))
-    val values2   = values   + ("help" -> valuesHelp)
-    new Args(Opt.helpFlag +: opts, defaults2, values2)
-  }
+  def apply(
+    programInvocation: String,
+    description: String,
+    opts: Seq[Opt[_]], 
+    defaults: Map[String,Any]): Args =
+      apply(programInvocation, description, opts, defaults, defaults)
+
+  def apply(
+    programInvocation: String,
+    description: String,
+    opts: Seq[Opt[_]], 
+    defaults: Map[String,Any], 
+    values: Map[String,Any]): Args = {
+      val defaults2  = defaults + ("help" -> defaults.getOrElse("help", false))
+      val valuesHelp = values.getOrElse("help", defaults2("help"))
+      val values2    = values   + ("help" -> valuesHelp)
+      val failures   = Seq.empty[(String,Any)]
+
+      new Args(programInvocation, description, Opt.helpFlag +: opts, defaults2, values2, failures)
+    }
 
   case class UnrecognizedArgument(arg: String, rest: Seq[String])
     extends RuntimeException("") {

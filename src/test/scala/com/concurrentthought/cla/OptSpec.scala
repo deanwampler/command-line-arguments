@@ -11,8 +11,8 @@ class OptSpec extends FunSpec {
         Opt.string(
           name    = "",
           flags   = Seq("-i", "--in", "--input"),
-          help    = "help message",
-          default = Some("/data/input"))
+          default = Some("/data/input"),
+          help    = "help message")
       }
     }
 

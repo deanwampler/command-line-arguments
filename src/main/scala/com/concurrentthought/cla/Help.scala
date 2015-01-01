@@ -1,28 +1,21 @@
 package com.concurrentthought.cla
 
+/**
+ * Format a help message for the command-line invocation of a program, based
+ * on the `Args` object passed to `apply`. 
+ */
 object Help {
   /** Arbitrary maximum width for the descriptive string after the options. */
   val maxHelpWidth = 60
-}
 
-/**
- * Format a help message for the command-line invocation of a program. It has
- * these fields:
- * <ol>
- * <li>`programInvocation` - e.g., "java -cp ... Foo"</li>
- * <li>`description` - An optional description or additional message.</li>
- * </ol>
- * Note that the formatted help message will include the default values for the
- * options, when they are defined, but excluding `Flag`s where the default is always
- * true or false, depending on the sense of the option.
- */
-case class Help(
-  programInvocation: String = "java -cp ...",
-  description: String = "") {
-
-  /** Return the help string for the given `Args`. */
+  /**
+   * Return the help string for the given `Args`.
+   * Note that the formatted help message will include the default values for the
+   * options, when they are defined, but excluding `Flag`s where the default is
+   * always true or false, depending on the sense of the option.
+   */
   def apply(args: Args): String = {
-    val lines = Vector(s"Usage: $programInvocation [options]", description) ++
+    val lines = Vector(s"Usage: ${args.programInvocation} [options]", args.description) ++
       errorsHelp(args) ++
       Vector("Where the supported options are the following:") ++ argsHelp(args)
     (for { s <- lines } yield s).mkString("", "\n", "\n")

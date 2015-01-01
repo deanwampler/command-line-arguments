@@ -5,51 +5,50 @@ object SampleOpts {
   val stringOpt = Opt.string(
     name    = "string",
     flags   = Seq("-s", "--s", "--string"),
-    help    = "string help message",
-    default = Some("foobar"))
+    default = Some("foobar"),
+    help    = "string help message")
 
   val charOpt = Opt.char(
     name    = "char",
     flags   = Seq("-c", "--c", "--char"),
-    help    = "string help message",
-    default = Some('x'))
+    default = Some('x'),
+    help    = "string help message")
 
   val byteOpt = Opt.byte(
     name    = "byte",
     flags   = Seq("-b", "--b", "--byte"),
-    help    = "byte help message",
-    default = Some(0))
+    default = Some(0),
+    help    = "byte help message")
 
   val intOpt = Opt.int(
     name    = "int",
     flags   = Seq("-i", "--i", "--int"),
-    help    = "int help message",
-    default = Some(0))
+    default = Some(0),
+    help    = "int help message")
 
   val longOpt = Opt.long(
     name    = "long",
     flags   = Seq("-l", "--l", "--long"),
-    help    = "long help message",
-    default = Some(0))
+    default = Some(0),
+    help    = "long help message")
 
   val floatOpt = Opt.float(
     name    = "float",
     flags   = Seq("-f", "--f", "--float"),
-    help    = "float help message",
-    default = Some(0.0F))
+    default = Some(0.0F),
+    help    = "float help message")
 
   val doubleOpt = Opt.double(
     name    = "double",
     flags   = Seq("-d", "--d", "--double"),
-    help    = "double help message",
-    default = Some(0.0))
+    default = Some(0.0),
+    help    = "double help message")
 
-  val seqOpt = Opt.seq[Double](
-    delimsRE = "[-_:]",
+  val seqOpt = Opt.seq[Double](delimsRE = "[-_:]")(
     name     = "seq",
     flags    = Seq("-s", "--s", "--seq"),
-    help     = "seq help message",
-    default  = Some(Nil))(Opt.toTry(_.toDouble))
+    default  = Some(Nil),
+    help     = "seq help message")(Opt.toTry(_.toDouble))
 
   val allOpts = Seq(stringOpt, charOpt, byteOpt, intOpt, longOpt, floatOpt, doubleOpt, seqOpt)
   val allDefaults = allOpts.map(o => (o.name, o.default.get)).toMap + ("help" -> false)

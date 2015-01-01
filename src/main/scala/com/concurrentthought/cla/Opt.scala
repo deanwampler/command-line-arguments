@@ -49,16 +49,16 @@ object Opt {
       /** Override toString to show a nicer name for the exception than the FQN. */
       override def toString = {
         val causeStr = if (cause == None) "" else s" (cause: ${cause.get})"
-        "InvalidValueString: " + getMessage + causeStr
+        "Invalid value string: " + getMessage + causeStr
       }
     }
 
   def apply[V](
     name:    String,
     flags:   Seq[String],
-    help:    String = "",
-    default: Option[V] = None)(fromString: String => Try[V]) =
-      OptWithValue(name, flags, help, default)(fromString)
+    default: Option[V] = None,
+    help:    String = "")(fromString: String => Try[V]) =
+      OptWithValue(name, flags, default, help)(fromString)
 
   // Common options.
 
@@ -96,56 +96,56 @@ object Opt {
   def string(
     name:    String,
     flags:   Seq[String],
-    help:    String = "",
-    default: Option[String] = None) = apply(name, flags, help, default)(
+    default: Option[String] = None,
+    help:    String = "") = apply(name, flags, default, help)(
       toTry(identity))
 
   /** Create a Char option. Just takes the first character in the value string. */
   def char(
     name:    String,
     flags:   Seq[String],
-    help:    String = "",
-    default: Option[Char] = None) = apply(name, flags, help, default)(
+    default: Option[Char] = None,
+    help:    String = "") = apply(name, flags, default, help)(
       toTry(_(0)))
 
   /** Create a Byte option. */
   def byte(
     name:    String,
     flags:   Seq[String],
-    help:    String = "",
-    default: Option[Byte] = None) = apply(name, flags, help, default)(
+    default: Option[Byte] = None,
+    help:    String = "") = apply(name, flags, default, help)(
       toTry(_.toByte))
 
   /** Create an Int option. */
   def int(
     name:    String,
     flags:   Seq[String],
-    help:    String = "",
-    default: Option[Int] = None) = apply(name, flags, help, default)(
+    default: Option[Int] = None,
+    help:    String = "") = apply(name, flags, default, help)(
       toTry(_.toInt))
 
   /** Create a Long option. */
   def long(
     name:    String,
     flags:   Seq[String],
-    help:    String = "",
-    default: Option[Long] = None) = apply(name, flags, help, default)(
+    default: Option[Long] = None,
+    help:    String = "") = apply(name, flags, default, help)(
       toTry(_.toLong))
 
   /** Create a Float option. */
   def float(
     name:    String,
     flags:   Seq[String],
-    help:    String = "",
-    default: Option[Float] = None) = apply(name, flags, help, default)(
+    default: Option[Float] = None,
+    help:    String = "") = apply(name, flags, default, help)(
       toTry(_.toFloat))
 
   /** Create a Double option. */
   def double(
     name:    String,
     flags:   Seq[String],
-    help:    String = "",
-    default: Option[Double] = None) = apply(name, flags, help, default)(
+    default: Option[Double] = None,
+    help:    String = "") = apply(name, flags, default, help)(
       toTry(_.toDouble))
 
   /**
@@ -154,16 +154,17 @@ object Opt {
    * delimiter characters, use "[;-_]", for example. The resulting substrings won't
    * be trimmed of whitespace, in case you want it, but you can also remove any
    * internal whitespace (i.e., not at the beginning or end of the input string),
-   * e.g., "\\s*[;-_]\\s*".
+   * e.g., "\\s*[;-_]\\s*". The delimiter is given as a separate argument list so
+   * that the list of common Opt arguments is consistent with the other helper
+   * methods.
    */
-  def seq[V](
-    delimsRE:  String,
+  def seq[V](delimsRE:  String)(
     name:      String,
     flags:     Seq[String],
-    help:      String = "",
-    default:   Option[Seq[V]] = None)(fromString: String => Try[V]) = {
+    default:   Option[Seq[V]] = None,
+    help:      String = "")(fromString: String => Try[V]) = {
       require (delimsRE.trim.length > 0, "The delimiters RE string can't be empty.")
-      apply(name, flags, help, default) {
+      apply(name, flags, default, help) {
         s => seqSupport(name, s, delimsRE, fromString)
       }
     }
@@ -192,8 +193,8 @@ object Opt {
 case class OptWithValue[V](
   name:    String,
   flags:   Seq[String],
-  help:    String = "",
-  default: Option[V] = None)(fromString: String => Try[V]) extends Opt[V] {
+  default: Option[V] = None,
+  help:    String = "")(fromString: String => Try[V]) extends Opt[V] {
 
   val parser: Opt.Parser[V] = {
     case flag +: value +: tail if flags.contains(flag) => fromString(value) match {
