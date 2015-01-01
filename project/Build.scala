@@ -28,9 +28,8 @@ object Resolvers {
 object Dependencies {
 
   val scalaTest      = "org.scalatest"  %% "scalatest"    % "2.2.1"  % "test"
-  val scalaCheck     = "org.scalacheck" %% "scalacheck"   % "1.12.1" % "test"
 
-  val dependencies = Seq(scalaTest, scalaCheck)
+  val dependencies = Seq(scalaTest)
 }
 
 object CLABuild extends Build {
