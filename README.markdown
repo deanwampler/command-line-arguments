@@ -9,9 +9,13 @@ Details on defining releases as dependencies in SBT are TBD.
 
 ## Usage
 
-The included [com.concurrentthought.cla.SampleMain](src/main/scala/com/concurrentthought/cla/SampleMain.scala) shows two different idiomatic ways to set up and use the API.
+The included [com.concurrentthought.cla.CLASampleMain](src/main/scala/com/concurrentthought/cla/CLASampleMain.scala) shows two different idiomatic ways to set up and use the API.
 
 ```scala
+import com.concurrentthought.cla._
+
+object CLASampleMain {
+
   def main(argstrings: Array[String]) = {
     val input  = Opt.string(
       name     = "input",
@@ -32,11 +36,13 @@ The included [com.concurrentthought.cla.SampleMain](src/main/scala/com/concurren
       flags    = Seq("-p", "--path"),
       help     = "Path elements separated by ':' or ';'.")
 
-    val args = Args("run-main SampleMain", "Demonstrates the CLA API.",
+    val args = Args("run-main CLASampleMain", "Demonstrates the CLA API.",
       Seq(input, output, logLevel, path)).parse(argstrings)
 
     process(args, argstrings)
   }
+  ...
+}
 ```
 
  Each option is defined using a [com.concurrentthought.cla.Opt](src/main/scala/com/concurrentthought/cla/Opt.scala) value. In this case, there are helper methods in the `Opt` companion object for constructing options where the values are strings or numbers. The `string` and `int` helpers are used here for `String` and `Int` arguments, respectively). 
@@ -45,20 +51,16 @@ The arguments to each of these helpers (and also for `Opt[V].apply()` that they 
 
 There are also two helpers for command-line arguments that are strings that contain sequences of elements. We use one of them here, `seqString`, for a classpath-style argument, where the elements will be split into a `Seq[String]`, using `:` and `;` as delimiters; the first argument is a regular expression for the delimiter. There is also a more general `seq[V]` helper, where the string is first split, then parsed into `V` instances. See [Opt.seq[V]](src/main/scala/com/concurrentthought/cla/Opt.scala) for more details.
 
-The first two arguments to the `Args.apply()` method provide help strings. The first shows how to run the application, e.g., `run-main SampleMain` as shown, or perhaps `java -cp ... foo.bar.Main`, etc. The string is arbitrary. The second string is an optional description of the program. Finally, a `Seq[Opt[V]]` specifies the actual options supported.
+The first two arguments to the `Args.apply()` method provide help strings. The first shows how to run the application, e.g., `run-main CLASampleMain` as shown, or perhaps `java -cp ... foo.bar.Main`, etc. The string is arbitrary. The second string is an optional description of the program. Finally, a `Seq[Opt[V]]` specifies the actual options supported.
 
 Before discussing the `process` method shown, here is an alternative way to declare `Args`, in `main2`:
 
 
 
 ```scala
-import com.concurrentthought.cla._
-
-object SampleMain {
-
   def main2(argstrings: Array[String]) = {
     import Opt._
-    val args = Args("run-main SampleMain", "Demonstrates the CLA API.",
+    val args = Args("run-main CLASampleMain", "Demonstrates the CLA API.",
       Seq(
         string("input",     Seq("-i", "--in", "--input"),      None,              "Path to input file."),
         string("output",    Seq("-o", "--out", "--output"),    Some("/dev/null"), "Path to output file."),
@@ -119,7 +121,7 @@ The `get[V]` method returns values of the expected type. It uses `asInstanceOf[]
 
  Note that an advantage of `getOrElse[V]` is that its type parameter can be inferred due to the second argument.
 
- Try running with the help option, `run-main SampleMain --help`, then play with the other options. Note the error handling that's done if you omit a value when an option expects one, or an invalid value is given, such as `--log-level foo`.
- 
+ Try running with the help option, `run-main CLASampleMain --help`, then play with the other options. Note the error handling that's done if you omit a value when an option expects one, or an invalid value is given, such as `--log-level foo`.
+
 
 

@@ -4,22 +4,8 @@ import com.concurrentthought.cla._
  * Demonstrates how to use the API. Try running with different arguments,
  * including `--help`.
  */
-object SampleMain {
+object CLASampleMain {
   def main(argstrings: Array[String]) = {
-    import Opt._
-    val args = Args("run-main SampleMain", "Demonstrates the CLA API.",
-      Seq(
-        string("input",     Seq("-i", "--in", "--input"),      None,              "Path to input file."),
-        string("output",    Seq("-o", "--out", "--output"),    Some("/dev/null"), "Path to output file."),
-        int(   "log-level", Seq("-l", "--log", "--log-level"), Some(3),           "Log level to use."),
-        seq[String]("[:;]")(
-               "path",      Seq("-p", "--path"),               None,              "Path elements separated by ':' or ';'.")(toTry(_.toString))))
-
-    process(args, argstrings)
-  }
-
-  // Another example:
-  def main2(argstrings: Array[String]) = {
     val input  = Opt.string(
       name     = "input",
       flags    = Seq("-i", "--in", "--input"),
@@ -34,17 +20,31 @@ object SampleMain {
       flags    = Seq("-l", "--log", "--log-level"),
       default  = Some(3),
       help     = "Log level to use.")
-    val path = Opt.seq[String](delimsRE = "[:;]")(
+    val path = Opt.seqString(delimsRE = "[:;]")(
       name     = "path",
       flags    = Seq("-p", "--path"),
-      help     = "Path elements separated by ':' or ';'.")(Opt.toTry(_.toString))
+      help     = "Path elements separated by ':' or ';'.")
 
-    val args = Args("run-main SampleMain", "Demonstrates the CLA API.",
-      Seq(input, output, path, logLevel)).parse(argstrings)
+    val args = Args("run-main CLASampleMain", "Demonstrates the CLA API.",
+      Seq(input, output, logLevel, path)).parse(argstrings)
 
     process(args, argstrings)
   }
 
+  def main2(argstrings: Array[String]) = {
+    import Opt._
+    val args = Args("run-main CLASampleMain", "Demonstrates the CLA API.",
+      Seq(
+        string("input",     Seq("-i", "--in", "--input"),      None,              "Path to input file."),
+        string("output",    Seq("-o", "--out", "--output"),    Some("/dev/null"), "Path to output file."),
+        int(   "log-level", Seq("-l", "--log", "--log-level"), Some(3),           "Log level to use."),
+        seqString("[:;]")(
+               "path",      Seq("-p", "--path"),               None,              "Path elements separated by ':' or ';'.")))
+
+    process(args, argstrings)
+  }
+
+  // Another example:
   protected def process(args: Args, argstrings: Array[String]): Unit = {
     // Use the Args object to parse the user-specified arguments.
     val parsedArgs = args.parse(argstrings)
