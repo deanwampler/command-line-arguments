@@ -5,9 +5,25 @@ Dean Wampler, Ph.D.
 
 This is a [Scala](http://scala-lang.org) library for handling command-line arguments. It has no dependencies on other libraries (other than [ScalaTest](http://scalatest.org)), so its footprint is small.
 
-Details on defining releases as dependencies in SBT are TBD.
-
 ## Usage
+
+This library is built for Scala 2.11.4. Artifacts are published to [Sonatype's OSS service](https://oss.sonatype.org/index.html#nexus-search;quick%7Eshapeless). You'll need the following settings.
+
+```
+resolvers ++= Seq(
+  Resolver.sonatypeRepo("releases"),
+  Resolver.sonatypeRepo("snapshots")
+)
+...
+
+scalaVersion := "2.11.4"
+
+libraryDependencies ++= Seq(
+  "com.concurrentthought.cla" %% "command-line-arguments" % "0.1.1"
+)
+```
+
+## API
 
 The included [com.concurrentthought.cla.CLASampleMain](src/main/scala/com/concurrentthought/cla/CLASampleMain.scala) shows two different idiomatic ways to set up and use the API.
 
@@ -45,7 +61,7 @@ object CLASampleMain {
 }
 ```
 
- Each option is defined using a [com.concurrentthought.cla.Opt](src/main/scala/com/concurrentthought/cla/Opt.scala) value. In this case, there are helper methods in the `Opt` companion object for constructing options where the values are strings or numbers. The `string` and `int` helpers are used here for `String` and `Int` arguments, respectively). 
+ Each option is defined using a [com.concurrentthought.cla.Opt](src/main/scala/com/concurrentthought/cla/Opt.scala) value. In this case, there are helper methods in the `Opt` companion object for constructing options where the values are strings or numbers. The `string` and `int` helpers are used here for `String` and `Int` arguments, respectively).
 
 The arguments to each of these helpers (and also for `Opt[V].apply()` that they invoke) is the option name, used to retrieve the value later, a `Seq` of flags for command line invocation, an optional default value if the command-line argument isn't used, and a help string for the option.
 
@@ -99,7 +115,7 @@ Otherwise, print all the default values or those specified by the user to the co
     ...
 ```
 
-Finally, extract values and use them. 
+Finally, extract values and use them.
 
 ```
     ...
