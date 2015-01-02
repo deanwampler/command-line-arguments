@@ -57,7 +57,7 @@ object SampleOpts {
     default  = Some(Nil),
     help     = "seq-string help message")
 
-  val pathOpt = Opt.paths(
+  val pathOpt = Opt.path(
     name     = "path",
     flags    = Seq("-p", "--path"),
     default  = Some(Nil))

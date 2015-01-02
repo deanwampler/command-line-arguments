@@ -9,7 +9,7 @@ import java.io.PrintStream
  * invocation options, and contains any parsing errors that were found, which
  * is empty before parse is called. In order to properly construct the default
  * values, this constructor is protected. Instead, use the companion Args.apply
- * to construct initial instances correctly. Subsequent calls to `parse` return
+ * to construct initial instances correctly. Subsequent calls to `Args.parse` return
  * new, updated instances.
  */
 case class Args protected (
@@ -18,13 +18,20 @@ case class Args protected (
   opts: Seq[Opt[_]],
   defaults: Map[String,Any],
   values: Map[String,Any],
+  allValues: Map[String,Seq[Any]],
   failures: Seq[(String,Any)]) {
 
   def help: String = Help(this)
 
   lazy val parserChain: Opt.Parser[Any] = 
-    opts map (_.parser) reduceLeft (_ orElse _) orElse noMatch
+    opts map (_.parser) reduceLeft (_ orElse _) orElse noOptionMatch orElse defaultMatch
 
+  /**
+   * Parse the user-specified arguments, using `parserChain`. Note that if
+   * an unrecognized flag is found, i.e., a string that starts with one or two
+   * '-', it is an error. Otherwise, all unrecognized options are added to the 
+   * resulting `values` in a `Seq[String]` with the key, "remaining".
+   */
   def parse(args: Seq[String]): Args = {
     def p(args2: Seq[String]): Seq[(String, Any)] = args2 match {
       case Nil => Nil
@@ -45,28 +52,89 @@ case class Args protected (
       case (_, NonFatal(nf)) => true
       case _ => false
     }
-    copy(values = Args.defaults(opts) ++ successes.toMap, failures = failures)
+    val newValues = Args.defaults(opts) ++ successes.toMap
+    val newAllDefaultValues = Args.defaults(opts).map {
+      case (key,value) => (key,Vector(value))
+    }.toMap
+    val newAllActualValues = successes.foldLeft(Map.empty[String,Vector[Any]]){
+      case (map, (key, value)) => 
+        val newVect = map.getOrElse(key, Vector.empty) :+ value
+        map + (key -> newVect)
+    }
+    val newAllValues = newAllDefaultValues ++ newAllActualValues
+    copy(values = newValues, allValues = newAllValues, failures = failures)
   }
 
   import scala.reflect.ClassTag
 
+  /** 
+   * Return the value for the option. This will be either the default specified,
+   * if the user did not invoke the option, or the _last_ invocation of the
+   * command line option. In other words, if the argument list contains 
+   * `--foo bar1 --foo bar2`, then `Some("bar2")` is returned. 
+   * @see getAll 
+   */
   def get[V : ClassTag](flag: String): Option[V] =
     values.get(flag).map(_.asInstanceOf[V])
 
+  /**
+   * Like `get`, but an alternative is specified, if no value for the option
+   * exists, so the return value is of type `V`, rather than `Option[V]`.
+   * @type {[type]}
+   */
   def getOrElse[V : ClassTag](flag: String, orElse: V): V =
     values.getOrElse(flag, orElse).asInstanceOf[V]
 
+  /** 
+   * Return a `Seq` with all values specified for the option. This supports
+   * the case where an option can be repeated on the command line.
+   * If the user did not specify the option, then default is mapped to a 
+   * return value as follows:
+   * <ol>
+   * <li>`None` => `Nil` 
+   * <li>`Some(x)` => `Seq(x)` 
+   * </ol>
+   * If the user specified one or more invocations, then all of the values
+   * are returned in `Seq`. For example, for `--foo bar1 --foo bar2`, then
+   * this method returns `Seq("bar1", "bar2")`. 
+   * @see get 
+   */
+  def getAll[V : ClassTag](flag: String): Seq[V] =
+    allValues.getOrElse(flag, Nil).map(_.asInstanceOf[V])
+
+  def getAllOrElse[V : ClassTag](flag: String, orElse: Seq[V]): Seq[V] =
+    allValues.getOrElse(flag, orElse).map(_.asInstanceOf[V])
+
   /**
-   * Print the current values. Before any parsing is done, they values are
+   * Print the current values. Before any parsing is done, the values are
    * the defaults. After parsing, they are the defaults overridden by any
-   * user-supplied options.
+   * user-supplied options. If an option is specified multiple times, then
+   * the _last_ invocation is shown.
+   * @see printAllValues
    */
   def printValues(out: PrintStream = Console.out): Unit = {
-    out.println("Command line arguments:")
+    out.println("\nCommand line arguments:")
     val keys = values.keySet.toSeq.sorted
     val max = keys.maxBy(_.size).size
     val fmt = s"  %${max}s: %s"
     keys.foreach(key => out.println(fmt.format(key, values(key))))
+    out.println()
+  }
+
+  /**
+   * Print all the current values. Before any parsing is done, the values are
+   * the defaults. After parsing, they are the defaults overridden by all the
+   * user-supplied options. If an option is specified multiple times, then
+   * all values are shown.
+   * @see printValues
+   */
+  def printAllValues(out: PrintStream = Console.out): Unit = {
+    out.println("\nCommand line arguments (all values given):")
+    val keys = allValues.keySet.toSeq.sorted
+    val max = keys.maxBy(_.size).size
+    val fmt = s"  %${max}s: %s"
+    keys.foreach(key => out.println(fmt.format(key, allValues(key))))
+    out.println()
   }
 
   /**
@@ -92,9 +160,16 @@ case class Args protected (
     }
     else false
 
-  /** No match! */
-  protected val noMatch: Opt.Parser[Any] = {
-    case head +: tail => throw Args.UnrecognizedArgument(head, tail)
+  protected val noOptionRE = "(--?.+)".r
+
+  /** No option that starts with one or two '-' matches! */
+  protected val noOptionMatch: Opt.Parser[Any] = {
+    case noOptionRE(flag) +: tail => throw Args.UnrecognizedArgument(flag, tail)
+  }
+
+  /** Handle any unmatched argument that isn't a flag (i.e., starts with one or two '-'). */
+  protected val defaultMatch: Opt.Parser[Any] = {
+    case head +: tail => (("remaining", Success(head)), tail)
   }
 }
 
@@ -136,9 +211,10 @@ object Args {
       val defaults2  = defaults + ("help" -> defaults.getOrElse("help", false))
       val valuesHelp = values.getOrElse("help", defaults2("help"))
       val values2    = values   + ("help" -> valuesHelp)
+      val allValues  = values2.map{ case (k,v) => (k,Vector(v)) }
       val failures   = Seq.empty[(String,Any)]
 
-      new Args(programInvocation, description, opts2, defaults2, values2, failures)
+      new Args(programInvocation, description, opts2, defaults2, values2, allValues, failures)
     }
 
   case class UnrecognizedArgument(arg: String, rest: Seq[String])

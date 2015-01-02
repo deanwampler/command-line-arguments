@@ -57,6 +57,9 @@ object CLASampleMain {
     // Print all the default values or those specified by the user.
     parsedArgs.printValues()
 
+    // Print all the values including repeats.
+    parsedArgs.printAllValues()
+
     // Extract values and use them. Note that an advantage of getOrElse is that
     // the type parameter for the function can be inferred. E.g., `[Int]` is
     // inferred here.

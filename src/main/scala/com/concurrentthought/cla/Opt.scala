@@ -13,11 +13,11 @@ import scala.util.{Try, Success, Failure}
  * </ol>
  */
 sealed trait Opt[V] {
-  val name:    String
-  val flags:   Seq[String]
-  val help:    String
-  val default: Option[V]
-  val parser:  Opt.Parser[V]
+  val name:       String
+  val flags:      Seq[String]
+  val help:       String
+  val default:    Option[V]
+  val parser:     Opt.Parser[V]
 
   require (name.length != 0, "The Opt name can't be empty.")
   require (flags.length != 0, "The Opt must have one or more flags.")
@@ -37,6 +37,11 @@ object Opt {
   def toTry[V](to: String => V): String => Try[V] = s => Try(to(s))
 
   /**
+   * Lift `String => V` to `String => Seq[V]`.
+   */
+  def toSeq[V](to: String => V): String => Seq[V] = s => Vector(to(s))
+
+  /**
    * Exception raised when an invalid value string is given. Not all errors
    * are detected and reported this way. For example, calls to `s.toInt` for
    * an invalid string will result in `NumberFormatException`.
@@ -53,12 +58,16 @@ object Opt {
       }
     }
 
+  /**
+   * Construct an option that takes a value. For an option that doesn't
+   * take a value, see `Flag`.
+   */
   def apply[V](
-    name:    String,
-    flags:   Seq[String],
-    default: Option[V] = None,
-    help:    String = "")(fromString: String => Try[V]) =
-      OptWithValue(name, flags, default, help)(fromString)
+    name:       String,
+    flags:      Seq[String],
+    default:    Option[V] = None,
+    help:       String = "")(fromString: String => Try[V]) =
+      OptWithValue[V](name, flags, default, help)(fromString)
 
   // Common options.
 
@@ -97,56 +106,56 @@ object Opt {
     name:    String,
     flags:   Seq[String],
     default: Option[String] = None,
-    help:    String = "") = apply(name, flags, default, help)(
-      toTry(identity))
+    help:    String = "") = 
+      apply(name, flags, default, help)(toTry(identity))
 
   /** Create a Char option. Just takes the first character in the value string. */
   def char(
     name:    String,
     flags:   Seq[String],
     default: Option[Char] = None,
-    help:    String = "") = apply(name, flags, default, help)(
-      toTry(_(0)))
+    help:    String = "") = 
+      apply(name, flags, default, help)(toTry(_(0)))
 
   /** Create a Byte option. */
   def byte(
     name:    String,
     flags:   Seq[String],
     default: Option[Byte] = None,
-    help:    String = "") = apply(name, flags, default, help)(
-      toTry(_.toByte))
+    help:    String = "") = 
+      apply(name, flags, default, help)(toTry(_.toByte))
 
   /** Create an Int option. */
   def int(
     name:    String,
     flags:   Seq[String],
     default: Option[Int] = None,
-    help:    String = "") = apply(name, flags, default, help)(
-      toTry(_.toInt))
+    help:    String = "") = 
+      apply(name, flags, default, help)(toTry(_.toInt))
 
   /** Create a Long option. */
   def long(
     name:    String,
     flags:   Seq[String],
     default: Option[Long] = None,
-    help:    String = "") = apply(name, flags, default, help)(
-      toTry(_.toLong))
+    help:    String = "") = 
+      apply(name, flags, default, help)(toTry(_.toLong))
 
   /** Create a Float option. */
   def float(
     name:    String,
     flags:   Seq[String],
     default: Option[Float] = None,
-    help:    String = "") = apply(name, flags, default, help)(
-      toTry(_.toFloat))
+    help:    String = "") = 
+      apply(name, flags, default, help)(toTry(_.toFloat))
 
   /** Create a Double option. */
   def double(
     name:    String,
     flags:   Seq[String],
     default: Option[Double] = None,
-    help:    String = "") = apply(name, flags, default, help)(
-      toTry(_.toDouble))
+    help:    String = "") = 
+      apply(name, flags, default, help)(toTry(_.toDouble))
 
   /**
    * Create an option where the value string represents a sequence with a delimiter.
@@ -183,7 +192,7 @@ object Opt {
    * A helper method for path-like structures, where the default delimiter
    * for the platform is used, e.g., ':' for *nix systems and ';' for Windows.
    */
-  def paths(
+  def path(
     name:    String,
     flags:   Seq[String],
     default: Option[Seq[String]] = None,
@@ -206,13 +215,13 @@ object Opt {
 }
 
 /**
- * A command line argument where an explicit value should follow. In addition to
- * the fields in `Opt`, this type adds the following:
+ * A command line argument where an explicit value should follow.
+ * In addition to the fields in `Opt`, this type adds the following:
  * <ol>
  * <li>`fromString: String => V` - convert the found value from a String to the correct type.</li>
  * </ol>
  */
-case class OptWithValue[V](
+case class OptWithValue[V] (
   name:    String,
   flags:   Seq[String],
   default: Option[V] = None,
@@ -228,6 +237,7 @@ case class OptWithValue[V](
     }
   }
 }
+
 
 /**
  * An option that is just a flag, with no value. By default, its presence
