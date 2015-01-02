@@ -14,7 +14,7 @@ import sbtrelease.Utilities._
 object BuildSettings {
 
   val Name = "command-line-arguments"
-  val Version = "0.1.0"
+  val Version = "0.2.0"
   val ScalaVersion  = "2.11.4"
 
   lazy val buildSettings =
@@ -24,7 +24,9 @@ object BuildSettings {
       scalaVersion  := ScalaVersion,
       description   := "A library for handling command-line arguments.",
       scalacOptions := Seq("-deprecation", "-unchecked", "-encoding", "utf8",
-        "-Xlint", "-feature", "-Ywarn-infer-any"), //, "-Ywarn-value-discard"),
+        "-Xlint", "-feature", "-Ywarn-infer-any"),
+        // This is a nice warning, but it trips up ScalaTest constructs,
+        // among others: "-Ywarn-value-discard"
 
       buildInfoPackage := Name,
       buildInfoKeys := Seq[BuildInfoKey](version, scalaVersion),
@@ -38,6 +40,30 @@ object BuildSettings {
       )
     )
 }
+
+// Shell prompt which show the current project,
+// git branch and build version
+object ShellPrompt {
+  object devnull extends ProcessLogger {
+    def info (s: => String) {}
+    def error (s: => String) { }
+    def buffer[T] (f: => T): T = f
+  }
+  def currBranch = (
+    ("git status -sb".lines_!(devnull).headOption)
+      getOrElse "-" stripPrefix "## "
+  )
+
+  val Prompt = {
+    (state: State) => {
+      val currProject = Project.extract (state).currentProject.id
+      "%s:%s:%s> ".format (
+        currProject, currBranch, BuildSettings.Version
+      )
+    }
+  }
+}
+
 
 object Resolvers {
   val typesafe = "Typesafe Repository" at "http://repo.typesafe.com/typesafe/releases/"
@@ -63,9 +89,9 @@ object CLABuild extends Build {
     id = BuildSettings.Name,
     base = file("."),
     settings = buildSettings ++ Seq(
-      shellPrompt := { state => "(%s)> ".format(Project.extract(state).currentProject.id) },
-      resolvers := allResolvers,
-      exportJars := true,
+      shellPrompt := ShellPrompt.Prompt,
+      resolvers   := allResolvers,
+      exportJars  := true,
       libraryDependencies ++= Dependencies.dependencies))
 }
 
