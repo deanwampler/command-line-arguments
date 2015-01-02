@@ -246,6 +246,18 @@ class OptSpec extends FunSpec {
         assert((("seq-string", Try(Seq("111.3", "126.2", "123.4", "354.6"))), Seq("one", "two")) === result)
       }
     }
+
+    describe ("path() constructs a Seq[String] option or platform-specific path, like CLASSPATH") {
+      it ("""splits the string into a Seq[String] using the delimiter given by sys.props.getOrElse("path.separator",":")""") {
+        val path1 = Seq("/foo/bar", "/home/me")
+        val path = 
+          if (pathDelim != ":") path1.map(s => "C:"+s).mkString(pathDelim)
+          else path1.mkString(pathDelim)
+        val expected = Try(path.split(pathDelim).toVector)
+        val result = pathOpt.parser(Seq("--path", path, "one", "two"))
+        assert((("path", expected), Seq("one", "two")) === result)
+      }
+    }
   }
 
   describe ("case class Flag") {

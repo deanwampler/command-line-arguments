@@ -57,6 +57,14 @@ object SampleOpts {
     default  = Some(Nil),
     help     = "seq-string help message")
 
-  val allOpts = Seq(stringOpt, charOpt, byteOpt, intOpt, longOpt, floatOpt, doubleOpt, seqOpt, seqStringOpt)
+  val pathOpt = Opt.paths(
+    name     = "path",
+    flags    = Seq("-p", "--path"),
+    default  = Some(Nil))
+
+  val pathDelim = sys.props.getOrElse("path.separator",":")
+
+  val allOpts = Seq(stringOpt, charOpt, byteOpt, intOpt, longOpt, 
+    floatOpt, doubleOpt, seqOpt, seqStringOpt, pathOpt)
   val allDefaults = allOpts.map(o => (o.name, o.default.get)).toMap + ("help" -> false)
 }

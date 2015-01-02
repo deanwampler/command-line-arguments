@@ -139,6 +139,7 @@ class ArgsSpec extends FunSpec {
           |        help: false
           |         int: 0
           |        long: 0
+          |        path: List()
           |         seq: List()
           |  seq-string: List()
           |      string: foobar
@@ -157,7 +158,8 @@ class ArgsSpec extends FunSpec {
           "--float",      "1.1",
           "--double",     "2.2",
           "--seq",        "111.3:126.2_123.4-354.6",
-          "--seq-string", "a:b_c-d"))
+          "--seq-string", "a:b_c-d",
+          "--path",       s"/foo/bar${pathDelim}/home/me"))
         val out = new StringOut
         args.printValues(out.out)
         val expected = """Command line arguments:
@@ -168,6 +170,7 @@ class ArgsSpec extends FunSpec {
           |        help: true
           |         int: 4
           |        long: 5
+          |        path: Vector(/foo/bar, /home/me)
           |         seq: Vector(111.3, 126.2, 123.4, 354.6)
           |  seq-string: Vector(a, b, c, d)
           |      string: hello
@@ -233,7 +236,8 @@ class ArgsSpec extends FunSpec {
       "--float",      "1.1",
       "--double",     "2.2",
       "--seq",        "111.3:126.2_123.4-354.6",
-      "--seq-string", "a:b_c-d"))
+      "--seq-string", "a:b_c-d",
+      "--path",       s"/foo/bar${pathDelim}/home/me"))
     val values = Map[String,Any](
       "help"       -> false,
       "string"     -> "hello",
@@ -244,7 +248,9 @@ class ArgsSpec extends FunSpec {
       "float"      -> 1.1F,
       "double"     -> 2.2,
       "seq"        -> Seq(111.3, 126.2, 123.4, 354.6),
-      "seq-string" -> Vector("a", "b", "c", "d"))
+      "seq-string" -> Vector("a", "b", "c", "d"),
+      "path"       -> Vector("/foo/bar", "/home/me"))
+
     (args, values)
   }
 }

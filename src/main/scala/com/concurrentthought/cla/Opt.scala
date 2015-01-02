@@ -179,6 +179,18 @@ object Opt {
     help:    String = "") =
       seq[String](delimsRE)(name, flags, default, help)(toTry(_.toString))
 
+  /**
+   * A helper method for path-like structures, where the default delimiter
+   * for the platform is used, e.g., ':' for *nix systems and ';' for Windows.
+   */
+  def paths(
+    name:    String,
+    flags:   Seq[String],
+    default: Option[Seq[String]] = None,
+    help:    String = "List of file system paths") =
+      seqString(sys.props.getOrElse("path.separator",":"))(
+        name, flags, default, help)
+
   private def seqSupport[V](name: String, str: String, delimsRE: String,
     fromString: String => Try[V]): Try[Seq[V]] = {
     def f(strs: Seq[String], vect: Vector[V]): Try[Vector[V]] = strs match {

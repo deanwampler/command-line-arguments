@@ -65,7 +65,9 @@ object CLASampleMain {
 
 The arguments to each of these helpers (and also for `Opt[V].apply()` that they invoke) is the option name, used to retrieve the value later, a `Seq` of flags for command line invocation, an optional default value if the command-line argument isn't used, and a help string for the option.
 
-There are also two helpers for command-line arguments that are strings that contain sequences of elements. We use one of them here, `seqString`, for a classpath-style argument, where the elements will be split into a `Seq[String]`, using `:` and `;` as delimiters; the first argument is a regular expression for the delimiter. There is also a more general `seq[V]` helper, where the string is first split, then parsed into `V` instances. See [Opt.seq[V]](src/main/scala/com/concurrentthought/cla/Opt.scala) for more details.
+There are also two helpers for command-line arguments that are strings that contain sequences of elements. We use one of them here, `seqString`, for a classpath-style argument, where the elements will be split into a `Seq[String]`, using `:` and `;` as delimiters; the first argument is a regular expression for the delimiter. If you want to support a path-like option, e.g., a `CLASSPATH`, there is another, even more specific helper, `Opt.path`, that handles the platform-specific value for the path-element separator.
+
+There is also a more general `seq[V]` helper, where the string is first split, then parsed into `V` instances. See [Opt.seq[V]](src/main/scala/com/concurrentthought/cla/Opt.scala) for more details.
 
 The first two arguments to the `Args.apply()` method provide help strings. The first shows how to run the application, e.g., `run-main CLASampleMain` as shown, or perhaps `java -cp ... foo.bar.Main`, etc. The string is arbitrary. The second string is an optional description of the program. Finally, a `Seq[Opt[V]]` specifies the actual options supported.
 
