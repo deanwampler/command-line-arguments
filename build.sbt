@@ -9,8 +9,6 @@ organization := "com.concurrentthought.cla"
 
 profileName := "com.concurrentthought"
 
-version := "0.1.0"
-
 pomExtra := {
   <url>https://github.com/deanwampler/command-line-arguments</url>
   <licenses>
