@@ -33,16 +33,16 @@ object Opt {
 
   /**
    * Lift `String => V` to `String => Try[V]`.
-   */   
+   */
   def toTry[V](to: String => V): String => Try[V] = s => Try(to(s))
 
   /**
    * Exception raised when an invalid value string is given. Not all errors
-   * are detected and reported this way. For example, calls to `s.toInt` for 
+   * are detected and reported this way. For example, calls to `s.toInt` for
    * an invalid string will result in `NumberFormatException`.
    */
   case class InvalidValueString(
-    flag: String, valueMessage: String, cause: Option[Throwable] = None) 
+    flag: String, valueMessage: String, cause: Option[Throwable] = None)
     extends RuntimeException(s"$valueMessage for option $flag",
       if (cause == None) null else cause.get) {
 
@@ -78,7 +78,7 @@ object Opt {
   val socketFlag = Opt[(String,Int)](
     name  = "socket",
     flags = Seq("-s", "--socket"),
-    help  = "Socket host:port.") { s => 
+    help  = "Socket host:port.") { s =>
       val array = s.split(":")
       if (array.length != 2) Failure(InvalidValueString("--socket", s))
       else {
@@ -91,7 +91,7 @@ object Opt {
     }
 
   // Helper methods to create options.
-  
+
   /** Create a String option */
   def string(
     name:    String,
@@ -159,24 +159,24 @@ object Opt {
    * methods.
    */
   def seq[V](delimsRE:  String)(
-    name:      String,
-    flags:     Seq[String],
-    default:   Option[Seq[V]] = None,
-    help:      String = "")(fromString: String => Try[V]) = {
+    name:    String,
+    flags:   Seq[String],
+    default: Option[Seq[V]] = None,
+    help:    String = "")(fromString: String => Try[V]) = {
       require (delimsRE.trim.length > 0, "The delimiters RE string can't be empty.")
       apply(name, flags, default, help) {
         s => seqSupport(name, s, delimsRE, fromString)
       }
     }
 
-  /** 
+  /**
    * A helper method when the substrings are returned without further processing required.
    */
   def seqString(delimsRE:  String)(
-    name:      String,
-    flags:     Seq[String],
-    default:   Option[Seq[String]] = None,
-    help:      String = "") = 
+    name:    String,
+    flags:   Seq[String],
+    default: Option[Seq[String]] = None,
+    help:    String = "") =
       seq[String](delimsRE)(name, flags, default, help)(toTry(_.toString))
 
   private def seqSupport[V](name: String, str: String, delimsRE: String,
