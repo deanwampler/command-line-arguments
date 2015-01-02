@@ -80,7 +80,6 @@ case class Args protected (
   /**
    * Like `get`, but an alternative is specified, if no value for the option
    * exists, so the return value is of type `V`, rather than `Option[V]`.
-   * @type {[type]}
    */
   def getOrElse[V : ClassTag](flag: String, orElse: V): V =
     values.getOrElse(flag, orElse).asInstanceOf[V]
