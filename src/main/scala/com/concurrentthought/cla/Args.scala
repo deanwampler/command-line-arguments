@@ -23,13 +23,13 @@ case class Args protected (
 
   def help: String = Help(this)
 
-  lazy val parserChain: Opt.Parser[Any] = 
+  lazy val parserChain: Opt.Parser[Any] =
     opts map (_.parser) reduceLeft (_ orElse _) orElse noOptionMatch orElse defaultMatch
 
   /**
    * Parse the user-specified arguments, using `parserChain`. Note that if
    * an unrecognized flag is found, i.e., a string that starts with one or two
-   * '-', it is an error. Otherwise, all unrecognized options are added to the 
+   * '-', it is an error. Otherwise, all unrecognized options are added to the
    * resulting `values` in a `Seq[String]` with the key, "remaining".
    */
   def parse(args: Seq[String]): Args = {
@@ -52,27 +52,35 @@ case class Args protected (
       case (_, NonFatal(nf)) => true
       case _ => false
     }
-    val newValues = Args.defaults(opts) ++ successes.toMap
+
     val newAllDefaultValues = Args.defaults(opts).map {
       case (key,value) => (key,Vector(value))
     }.toMap
     val newAllActualValues = successes.foldLeft(Map.empty[String,Vector[Any]]){
-      case (map, (key, value)) => 
+      case (map, (key, value)) =>
         val newVect = map.getOrElse(key, Vector.empty) :+ value
         map + (key -> newVect)
     }
-    val newAllValues = newAllDefaultValues ++ newAllActualValues
+
+    // Special handling for "remaining" arguments. We want the "values" to contain
+    // all of them, not just the last one seen.
+    val remaining = newAllActualValues.getOrElse(Args.REMAINING_KEY, Vector.empty[String])
+    // (In case it wasn't present, add it now...)
+    val newAllActualValues2 = newAllActualValues + (Args.REMAINING_KEY -> remaining)
+    val newValues = Args.defaults(opts) ++ successes.toMap + (Args.REMAINING_KEY -> remaining)
+    val newAllValues = newAllDefaultValues ++ newAllActualValues2
+
     copy(values = newValues, allValues = newAllValues, failures = failures)
   }
 
   import scala.reflect.ClassTag
 
-  /** 
+  /**
    * Return the value for the option. This will be either the default specified,
    * if the user did not invoke the option, or the _last_ invocation of the
-   * command line option. In other words, if the argument list contains 
-   * `--foo bar1 --foo bar2`, then `Some("bar2")` is returned. 
-   * @see getAll 
+   * command line option. In other words, if the argument list contains
+   * `--foo bar1 --foo bar2`, then `Some("bar2")` is returned.
+   * @see getAll
    */
   def get[V : ClassTag](flag: String): Option[V] =
     values.get(flag).map(_.asInstanceOf[V])
@@ -84,19 +92,19 @@ case class Args protected (
   def getOrElse[V : ClassTag](flag: String, orElse: V): V =
     values.getOrElse(flag, orElse).asInstanceOf[V]
 
-  /** 
+  /**
    * Return a `Seq` with all values specified for the option. This supports
    * the case where an option can be repeated on the command line.
-   * If the user did not specify the option, then default is mapped to a 
+   * If the user did not specify the option, then default is mapped to a
    * return value as follows:
    * <ol>
-   * <li>`None` => `Nil` 
-   * <li>`Some(x)` => `Seq(x)` 
+   * <li>`None` => `Nil`
+   * <li>`Some(x)` => `Seq(x)`
    * </ol>
    * If the user specified one or more invocations, then all of the values
    * are returned in `Seq`. For example, for `--foo bar1 --foo bar2`, then
-   * this method returns `Seq("bar1", "bar2")`. 
-   * @see get 
+   * this method returns `Seq("bar1", "bar2")`.
+   * @see get
    */
   def getAll[V : ClassTag](flag: String): Seq[V] =
     allValues.getOrElse(flag, Nil).map(_.asInstanceOf[V])
@@ -109,14 +117,16 @@ case class Args protected (
    * the defaults. After parsing, they are the defaults overridden by any
    * user-supplied options. If an option is specified multiple times, then
    * the _last_ invocation is shown.
+   * Note that the "remaining" arguments are the same in this output and in
+   * `printAllValues`.
    * @see printAllValues
    */
   def printValues(out: PrintStream = Console.out): Unit = {
     out.println("\nCommand line arguments:")
-    val keys = values.keySet.toSeq.sorted
+    val keys = (opts.map(_.name)) :+ Args.REMAINING_KEY
     val max = keys.maxBy(_.size).size
     val fmt = s"  %${max}s: %s"
-    keys.foreach(key => out.println(fmt.format(key, values(key))))
+    keys.foreach(key => out.println(fmt.format(key, values.getOrElse(key, Vector.empty[String]))))
     out.println()
   }
 
@@ -129,10 +139,10 @@ case class Args protected (
    */
   def printAllValues(out: PrintStream = Console.out): Unit = {
     out.println("\nCommand line arguments (all values given):")
-    val keys = allValues.keySet.toSeq.sorted
+    val keys = (opts.map(_.name)) :+ Args.REMAINING_KEY
     val max = keys.maxBy(_.size).size
     val fmt = s"  %${max}s: %s"
-    keys.foreach(key => out.println(fmt.format(key, allValues(key))))
+    keys.foreach(key => out.println(fmt.format(key, allValues.getOrElse(key, Vector.empty[String]))))
     out.println()
   }
 
@@ -168,12 +178,13 @@ case class Args protected (
 
   /** Handle any unmatched argument that isn't a flag (i.e., starts with one or two '-'). */
   protected val defaultMatch: Opt.Parser[Any] = {
-    case head +: tail => (("remaining", Success(head)), tail)
+    case head +: tail => ((Args.REMAINING_KEY, Success(head)), tail)
   }
 }
 
 object Args {
 
+  val REMAINING_KEY = "remaining"
   val defaultProgramInvocation: String = "java -cp ..."
   val defaultDescription: String = ""
 
@@ -196,15 +207,15 @@ object Args {
   def apply(
     programInvocation: String,
     description: String,
-    opts: Seq[Opt[_]], 
+    opts: Seq[Opt[_]],
     defaults: Map[String,Any]): Args =
       apply(programInvocation, description, opts, defaults, defaults)
 
   def apply(
     programInvocation: String,
     description: String,
-    opts: Seq[Opt[_]], 
-    defaults: Map[String,Any], 
+    opts: Seq[Opt[_]],
+    defaults: Map[String,Any],
     values: Map[String,Any]): Args = {
       val opts2      = if (opts.exists(_.name == "help")) opts else (Opt.helpFlag +: opts)
       val defaults2  = defaults + ("help" -> defaults.getOrElse("help", false))

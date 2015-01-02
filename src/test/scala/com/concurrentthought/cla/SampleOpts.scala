@@ -64,7 +64,7 @@ object SampleOpts {
 
   val pathDelim = sys.props.getOrElse("path.separator",":")
 
-  val allOpts = Seq(stringOpt, charOpt, byteOpt, intOpt, longOpt, 
+  val allOpts = Seq(stringOpt, byteOpt, charOpt, intOpt, longOpt,
     floatOpt, doubleOpt, seqOpt, seqStringOpt, pathOpt)
   val allDefaults = allOpts.map(o => (o.name, o.default.get)).toMap + ("help" -> false)
 }
