@@ -2,7 +2,7 @@ package com.concurrentthought.cla
 import org.scalatest.FunSpec
 
 class HelpSpec extends FunSpec {
-  import SampleOpts._
+  import SpecHelper._
 
   val inOpt = Opt.string(
     name    = "in",
@@ -17,7 +17,7 @@ class HelpSpec extends FunSpec {
 
   describe ("Help") {
     it ("returns a help string based on the command-line arguments") {
-      val args = Args("java HelpSpec", "A ScalaTest for the Help class.", 
+      val args = Args("java HelpSpec", "A ScalaTest for the Help class.",
                       Seq(inOpt, outOpt, Opt.quietFlag))
       val help = Help(args)
       assert(help ===

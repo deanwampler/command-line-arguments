@@ -1,6 +1,9 @@
 import SonatypeKeys._
 
-initialCommands += "import com.concurrentthought.cla._"
+initialCommands += """
+  import com.concurrentthought.cla._
+  import com.concurrentthought.cla.dsl._
+  """
 
 // See https://github.com/xerial/sbt-sonatype
 sonatypeSettings

@@ -2,9 +2,7 @@ package com.concurrentthought.cla
 import org.scalatest.FunSpec
 
 class ArgsSpec extends FunSpec {
-  import SampleOpts._
-
-  val noremains = Args.REMAINING_KEY -> Vector.empty[String]
+  import SpecHelper._
 
   describe ("case class Args") {
     describe ("empty list of options") {
@@ -210,6 +208,7 @@ class ArgsSpec extends FunSpec {
           |         seq: List()
           |  seq-string: List()
           |        path: List()
+          |   remaining: Vector()
           |
           |""".stripMargin
         assert(out.toString === expected)
@@ -243,6 +242,7 @@ class ArgsSpec extends FunSpec {
           |         seq: Vector(111.3, 126.2, 123.4, 354.6)
           |  seq-string: Vector(a, b, c, d)
           |        path: Vector(/foo/bar, /home/me)
+          |   remaining: Vector()
           |
           |""".stripMargin
         assert(out.toString === expected)
@@ -267,6 +267,7 @@ class ArgsSpec extends FunSpec {
           |         seq: Vector(List())
           |  seq-string: Vector(List())
           |        path: Vector(List())
+          |   remaining: Vector()
           |
           |""".stripMargin
         assert(out.toString === expected)
@@ -281,10 +282,13 @@ class ArgsSpec extends FunSpec {
           "--int",        "4",
           "--long",       "5",
           "--float",      "1.1",
+          "foo",
           "--double",     "2.2",
           "--seq",        "111.3:126.2_123.4-354.6",
           "--seq-string", "a:b_c-d",
-          "--path",       s"/foo/bar${pathDelim}/home/me"))
+          "bar",
+          "--path",       s"/foo/bar${pathDelim}/home/me",
+          "baz"))
         val out = new StringOut
         args.printAllValues(out.out)
         val expected = """
@@ -300,6 +304,7 @@ class ArgsSpec extends FunSpec {
           |         seq: Vector(Vector(111.3, 126.2, 123.4, 354.6))
           |  seq-string: Vector(Vector(a, b, c, d))
           |        path: Vector(Vector(/foo/bar, /home/me))
+          |   remaining: Vector(foo, bar, baz)
           |
           |""".stripMargin
         assert(out.toString === expected)

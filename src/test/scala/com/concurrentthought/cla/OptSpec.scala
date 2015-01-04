@@ -3,7 +3,7 @@ import org.scalatest.FunSpec
 import scala.util.{Try, Success, Failure}
 
 class OptSpec extends FunSpec {
-  import SampleOpts._
+  import SpecHelper._
 
   describe ("case class Opt") {
     it ("requires a non-empty name") {
@@ -20,6 +20,12 @@ class OptSpec extends FunSpec {
       Opt.string(
         name    = "in",
         flags   = Seq("-i", "--in", "--input"))
+    }
+
+    it ("allows the list of flags to be empty (but see Args requirements)") {
+      Opt.string(
+        name    = "in",
+        flags   = Nil)
     }
 
     it ("allows the value to default to None") {
@@ -250,7 +256,7 @@ class OptSpec extends FunSpec {
     describe ("path() constructs a Seq[String] option or platform-specific path, like CLASSPATH") {
       it ("""splits the string into a Seq[String] using the delimiter given by sys.props.getOrElse("path.separator",":")""") {
         val path1 = Seq("/foo/bar", "/home/me")
-        val path = 
+        val path =
           if (pathDelim != ":") path1.map(s => "C:"+s).mkString(pathDelim)
           else path1.mkString(pathDelim)
         val expected = Try(path.split(pathDelim).toVector)

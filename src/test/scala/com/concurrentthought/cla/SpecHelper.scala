@@ -1,6 +1,8 @@
 package com.concurrentthought.cla
 
-object SampleOpts {
+object SpecHelper {
+
+  val noremains = Args.REMAINING_KEY -> Vector.empty[String]
 
   val stringOpt = Opt.string(
     name    = "string",

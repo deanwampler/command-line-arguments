@@ -20,7 +20,6 @@ sealed trait Opt[V] {
   val parser:     Opt.Parser[V]
 
   require (name.length != 0, "The Opt name can't be empty.")
-  require (flags.length != 0, "The Opt must have one or more flags.")
 }
 
 object Opt {
@@ -106,31 +105,31 @@ object Opt {
     name:    String,
     flags:   Seq[String],
     default: Option[String] = None,
-    help:    String = "") = 
+    help:    String = "") =
       apply(name, flags, default, help)(toTry(identity))
-
-  /** Create a Char option. Just takes the first character in the value string. */
-  def char(
-    name:    String,
-    flags:   Seq[String],
-    default: Option[Char] = None,
-    help:    String = "") = 
-      apply(name, flags, default, help)(toTry(_(0)))
 
   /** Create a Byte option. */
   def byte(
     name:    String,
     flags:   Seq[String],
     default: Option[Byte] = None,
-    help:    String = "") = 
+    help:    String = "") =
       apply(name, flags, default, help)(toTry(_.toByte))
+
+  /** Create a Char option. Just takes the first character in the value string. */
+  def char(
+    name:    String,
+    flags:   Seq[String],
+    default: Option[Char] = None,
+    help:    String = "") =
+      apply(name, flags, default, help)(toTry(_(0)))
 
   /** Create an Int option. */
   def int(
     name:    String,
     flags:   Seq[String],
     default: Option[Int] = None,
-    help:    String = "") = 
+    help:    String = "") =
       apply(name, flags, default, help)(toTry(_.toInt))
 
   /** Create a Long option. */
@@ -138,7 +137,7 @@ object Opt {
     name:    String,
     flags:   Seq[String],
     default: Option[Long] = None,
-    help:    String = "") = 
+    help:    String = "") =
       apply(name, flags, default, help)(toTry(_.toLong))
 
   /** Create a Float option. */
@@ -146,7 +145,7 @@ object Opt {
     name:    String,
     flags:   Seq[String],
     default: Option[Float] = None,
-    help:    String = "") = 
+    help:    String = "") =
       apply(name, flags, default, help)(toTry(_.toFloat))
 
   /** Create a Double option. */
@@ -154,7 +153,7 @@ object Opt {
     name:    String,
     flags:   Seq[String],
     default: Option[Double] = None,
-    help:    String = "") = 
+    help:    String = "") =
       apply(name, flags, default, help)(toTry(_.toDouble))
 
   /**
