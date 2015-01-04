@@ -1,21 +1,20 @@
-package com.concurrentthought.cla
+package com.concurrentthought
 
 /**
- * Package object for a mini-DSL that allows you to specify the options just
- * using a multi-line string.
+ * Package object that adds  a mini-DSL allowing the user to construct an `Args`
+ * using using a multi-line string.
  * @note Experimental!
  */
-package object dsl {
+package object cla {
 
   /**
    * Specify the command-line arguments using a single, multi-line string.
    * Note the following example:
    * {{{
    * import com.concurrentthought.cla._
-   * import com.concurrentthought.cla.dsl._
    *
    * val args: Args = """
-   *   |java -cp foo
+   *   |java -cp ... foo
    *   |Some description
    *   |and a second line.
    *   |  -i | --in  | --input      string              Path to input file.
@@ -44,6 +43,9 @@ package object dsl {
    *   in `Opt`: `string`, `byte`, `char`, `int`, `long`, `float`, `double`, `path`,
    *   and `seqString`, where the string "seq" is used, followed by a required
    *   `(delim)` suffix to specify the delimiter regex, as shown in the example.
+   *   However, for a no-flag option, the value in this column is interpreted as a
+   *   name for the option for the help message. This is the one case where the string
+   *   isn't interpreted as a type specifier.
    *   The `=` indicates the default value to use, if present. Current limitations
    *   of the type specification include the following: (i) `Opt.seq[V]` isn't
    *   supported in this mechanism, (ii) default values can't be specified for

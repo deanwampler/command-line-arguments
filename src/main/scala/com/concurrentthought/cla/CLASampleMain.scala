@@ -1,11 +1,32 @@
-import com.concurrentthought.cla._
+package com.concurrentthought.cla
 
 /**
  * Demonstrates how to use the API. Try running with different arguments,
- * including `--help`.
+ * including `--help`. Try running the following examples within SBT:
+ * {{{
+ * run-main CLASampleMain -h
+ * run-main CLASampleMain --help
+ * run-main CLASampleMain -i /in -o /out -l 4 -p a:b --things a-b|c foo bar baz
+ * }}}
  */
 object CLASampleMain {
   def main(argstrings: Array[String]) = {
+    val args: Args = """
+      |run-main CLASampleMain
+      |Demonstrates the CLA API.
+      |  -i | --in  | --input      string              Path to input file.
+      |  -o | --out | --output     string=/dev/null    Path to output file.
+      |  -l | --log | --log-level  int=3               Log level to use.
+      |  -p | --path               path                Path elements separated by ':' (*nix) or ';' (Windows).
+      |       --things             seq([-|])           String elements separated by '-' or '|'.
+      |                            others              Other arguments.
+      |""".stripMargin.toArgs
+
+    process(args, argstrings)
+  }
+
+  /** Functionally identical to `main`, but more verbose. */
+  def main2(argstrings: Array[String]) = {
     val input  = Opt.string(
       name     = "input",
       flags    = Seq("-i", "--in", "--input"),
@@ -23,23 +44,33 @@ object CLASampleMain {
     val path = Opt.seqString(delimsRE = "[:;]")(
       name     = "path",
       flags    = Seq("-p", "--path"),
-      help     = "Path elements separated by ':' or ';'.")
+      help     = "Path elements separated by ':' (*nix) or ';' (Windows).")
+    val others = Args.makeRemainingOpt(
+      name     = "others",
+      help     = "Other arguments")
 
     val args = Args("run-main CLASampleMain", "Demonstrates the CLA API.",
-      Seq(input, output, logLevel, path)).parse(argstrings)
+      Seq(input, output, logLevel, path, others)).parse(argstrings)
 
     process(args, argstrings)
   }
 
-  def main2(argstrings: Array[String]) = {
+  /**
+   * Functionally identical to `main` and `main2`, but more verbose than `main`,
+   * yet a little less verbose than `main2`.
+   */
+  def main3(argstrings: Array[String]) = {
     import Opt._
+    import Args._
     val args = Args("run-main CLASampleMain", "Demonstrates the CLA API.",
       Seq(
         string("input",     Seq("-i", "--in", "--input"),      None,              "Path to input file."),
         string("output",    Seq("-o", "--out", "--output"),    Some("/dev/null"), "Path to output file."),
         int(   "log-level", Seq("-l", "--log", "--log-level"), Some(3),           "Log level to use."),
         seqString("[:;]")(
-               "path",      Seq("-p", "--path"),               None,              "Path elements separated by ':' or ';'.")))
+               "path",      Seq("-p", "--path"),               None,              "Path elements separated by ':' (*nix) or ';' (Windows)."),
+        makeRemainingOpt(
+               "others",                                                          "Other arguments")))
 
     process(args, argstrings)
   }

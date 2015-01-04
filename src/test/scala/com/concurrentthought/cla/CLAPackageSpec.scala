@@ -1,12 +1,11 @@
-package com.concurrentthought.cla.dsl
-import com.concurrentthought.cla._
+package com.concurrentthought.cla
 import org.scalatest.FunSpec
 
-class DSLSpec extends FunSpec {
+class CLAPackageSpec extends FunSpec {
   import SpecHelper._
 
   val argsStr = """
-    |java -cp foo
+    |java -cp ... foo
     |Some description
     |and a second line.
     |  -i | --in  | --input      string              Path to input file.
@@ -59,7 +58,7 @@ class DSLSpec extends FunSpec {
 
       it ("converts a multi line string into an Args") {
         val args = argsStr.toArgs
-        assert(args.programInvocation === "java -cp foo")
+        assert(args.programInvocation === "java -cp ... foo")
         assert(args.description       === "Some description and a second line.")
         checkBefore(args)
       }
@@ -73,7 +72,7 @@ class DSLSpec extends FunSpec {
           "--path",      s"a${pathDelim}b${pathDelim}c",
           "--things",    "a-b|c",
           "three", "four"))
-        assert(args.programInvocation === "java -cp foo")
+        assert(args.programInvocation === "java -cp ... foo")
         assert(args.description       === "Some description and a second line.")
         checkAfter(args)
       }
@@ -91,22 +90,22 @@ class DSLSpec extends FunSpec {
         }
         it ("uses the first such line as the 'program invocation'.") {
           val str = """
-            |java -cp foo
+            |java -cp ... foo
             |  -i | --in  | --input      string              Path to input file.
             |""".stripMargin
           val args = str.toArgs
-          assert(args.programInvocation === "java -cp foo")
+          assert(args.programInvocation === "java -cp ... foo")
           assert(args.description       === "")
         }
         it ("uses all subsequent lines as the 'description', joined together into one, space-separated line") {
           val str = """
-            |java -cp foo
+            |java -cp ... foo
             |Some description
             |and a second line.
             |  -i | --in  | --input      string              Path to input file.
             |""".stripMargin
           val args = str.toArgs
-          assert(args.programInvocation === "java -cp foo")
+          assert(args.programInvocation === "java -cp ... foo")
           assert(args.description       === "Some description and a second line.")
         }
       }
