@@ -4,10 +4,14 @@ package com.concurrentthought.cla
  * Demonstrates how to use the API. Try running with different arguments,
  * including `--help`. Try running the following examples within SBT:
  * {{{
- * run-main CLASampleMain -h
- * run-main CLASampleMain --help
- * run-main CLASampleMain -i /in -o /out -l 4 -p a:b --things x-y|z foo bar baz
+ * run-main com.concurrentthought.cla.CLASampleMain -h
+ * run -h
+ * run --help
+ * run -i /in -o /out -l 4 -p a:b --things x-y|z foo bar baz
+ * run --in /in --out=/out -l=4 --path "a:b" --things=x-y|z foo bar baz
  * }}}
+ * The last example demonstrates that both `flag value` and `flag=value` syntax
+ * is supported.
  */
 object CLASampleMain {
 
