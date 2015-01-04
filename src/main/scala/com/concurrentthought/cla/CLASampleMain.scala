@@ -10,9 +10,10 @@ package com.concurrentthought.cla
  * }}}
  */
 object CLASampleMain {
+
   def main(argstrings: Array[String]) = {
     val args: Args = """
-      |run-main CLASampleMain
+      |run-main CLASampleMain [options]
       |Demonstrates the CLA API.
       |  -i | --in  | --input      string              Path to input file.
       |  -o | --out | --output     string=/dev/null    Path to output file.
@@ -49,7 +50,7 @@ object CLASampleMain {
       name     = "others",
       help     = "Other arguments")
 
-    val args = Args("run-main CLASampleMain", "Demonstrates the CLA API.",
+    val args = Args("run-main CLASampleMain [options]", "Demonstrates the CLA API.",
       Seq(input, output, logLevel, path, others)).parse(argstrings)
 
     process(args, argstrings)
@@ -62,7 +63,7 @@ object CLASampleMain {
   def main3(argstrings: Array[String]) = {
     import Opt._
     import Args._
-    val args = Args("run-main CLASampleMain", "Demonstrates the CLA API.",
+    val args = Args("run-main CLASampleMain [options]", "Demonstrates the CLA API.",
       Seq(
         string("input",     Seq("-i", "--in", "--input"),      None,              "Path to input file."),
         string("output",    Seq("-o", "--out", "--output"),    Some("/dev/null"), "Path to output file."),
@@ -96,6 +97,10 @@ object CLASampleMain {
     // inferred here.
     setPathElements(parsedArgs.get[Seq[String]]("path"))
     setLogLevel(parsedArgs.getOrElse("log-level", 0))
+
+    println("\nYou gave the following \"other\" arguments: " +
+      parsedArgs.remaining.mkString(", "))
+    println
   }
 
   protected def setPathElements(path: Option[Seq[String]]) = path match {

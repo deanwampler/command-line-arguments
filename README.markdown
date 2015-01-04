@@ -19,7 +19,7 @@ resolvers ++= Seq(
 scalaVersion := "2.11.4"
 
 libraryDependencies ++= Seq(
-  "com.concurrentthought.cla" %% "command-line-arguments" % "0.1.1"
+  "com.concurrentthought.cla" %% "command-line-arguments" % "0.2.0"
 )
 ```
 
@@ -27,12 +27,63 @@ libraryDependencies ++= Seq(
 
 The included [com.concurrentthought.cla.CLASampleMain](src/main/scala/com/concurrentthought/cla/CLASampleMain.scala) shows two different idiomatic ways to set up and use the API.
 
+The simplest approach parses a multi-line string to specify the command-line arguments [com.concurrentthought.cla.Args](src/main/scala/com/concurrentthought/cla/Args.scala):
+
 ```scala
 import com.concurrentthought.cla._
 
 object CLASampleMain {
 
   def main(argstrings: Array[String]) = {
+    val args: Args = """
+      |run-main CLASampleMain [options]
+      |Demonstrates the CLA API.
+      |  -i | --in  | --input      string              Path to input file.
+      |  -o | --out | --output     string=/dev/null    Path to output file.
+      |  -l | --log | --log-level  int=3               Log level to use.
+      |  -p | --path               path                Path elements separated by ':' (*nix) or ';' (Windows).
+      |       --things             seq([-|])           String elements separated by '-' or '|'.
+      |                            others              Other arguments.
+      |""".stripMargin.toArgs
+
+    process(args, argstrings)
+  }
+  ...
+```
+
+The [Scaladocs comments](src/main/scala/com/concurrentthought/cla/package.scala) for the [cla package](src/main/scala/com/concurrentthought/cla/package.scala) explain the format and its limitations, but hopefully most of the format is reasonable intuitive from the example.
+
+The first lines of the string that *don't* have leading whitespace are interpreted as lines to show as part of the corresponding help message, including an example of how to invoke the program and zero or more additional descriptions.
+
+Next come the command-line options, one per line. Each must start with whitespace, followed by zero or more flags separated by `|`. There can be at most one option that has no flags. It is used to provide a help message for how command-line tokens that aren't associated with flags will be interpreted. (Note that the library will still handle these tokens whether or not you specify a line like this.)
+
+The center "column" specifies the type of the option and an optional default value, which is indicated with an equals `=` sign. The following "types" are supported:
+
+|   String | Interpretation  | Corresponding Helper Method    | Default Values Supported? |
+| -------: | :-------------- | :------------------------------ | :-------------- |
+| `string` | `String` value  | [Opt.string](src/main/scala/com/concurrentthought/cla/Opt.scala) | yes |
+|   `byte` |   `Byte` value  | [Opt.byte](src/main/scala/com/concurrentthought/cla/Opt.scala) | yes |
+|   `char` |   `Char` value  | [Opt.char](src/main/scala/com/concurrentthought/cla/Opt.scala) | yes |
+|    `int` |    `Int` value  | [Opt.int](src/main/scala/com/concurrentthought/cla/Opt.scala) | yes |
+|   `long` |   `Long` value  | [Opt.long](src/main/scala/com/concurrentthought/cla/Opt.scala) | yes |
+|  `float` |  `Float` value  | [Opt.float](src/main/scala/com/concurrentthought/cla/Opt.scala) | yes |
+| `double` | `Double` value  | [Opt.double](src/main/scala/com/concurrentthought/cla/Opt.scala) | yes |
+|  `path`  | "path-like" `Seq[String]` (note 1) | [Opt.path](src/main/scala/com/concurrentthought/cla/Opt.scala)   | no (note 2) |
+|   `seq`  | `Seq[String]` (note 1) | [Opt.seqString](src/main/scala/com/concurrentthought/cla/Opt.scala)            | no (note 2) |
+| *other*  | Only allowed for the single, no-flags case | [Args.remainingOpt](src/main/scala/com/concurrentthought/cla/Args.scala) | no (note 2) |
+
+* **Note 1:** Both `path` and `seq` split an argument using the delimiter regex. For `path`, this is the platform-specific path separator, given by `sys.props.getOrElse("path.separator", ":")`. For `seq`, you must provide the delimiter regex using a suffix of the form `(delimRE)`, as shown in the example.
+* **Note 2:** It's an implementation limitation that default values can't be specified using this approach. You can do this if you build the [Args](src/main/scala/com/concurrentthought/cla/Args.scala) with the API, as shown below.
+
+So, when an option expects something other than a `String`, the token given on the command line (or as a default here) will be parsed into the correct type, with error handling captured in the [Args.failures](src/main/scala/com/concurrentthought/cla/Args.scala) field.
+
+Finally, the rest of the text on a line is the help message for the option.
+
+Before discussing the `process` method shown, let's see two alternative, programmatic ways to declare [Args](src/main/scala/com/concurrentthought/cla/Args.scala) using the API:
+
+```scala
+  ...
+  def main2(argstrings: Array[String]) = {
     val input  = Opt.string(
       name     = "input",
       flags    = Seq("-i", "--in", "--input"),
@@ -50,10 +101,13 @@ object CLASampleMain {
     val path = Opt.seqString(delimsRE = "[:;]")(
       name     = "path",
       flags    = Seq("-p", "--path"),
-      help     = "Path elements separated by ':' or ';'.")
+      help     = "Path elements separated by ':' (*nix) or ';' (Windows).")
+    val others = Args.makeRemainingOpt(
+      name     = "others",
+      help     = "Other arguments")
 
-    val args = Args("run-main CLASampleMain", "Demonstrates the CLA API.",
-      Seq(input, output, logLevel, path)).parse(argstrings)
+    val args = Args("run-main CLASampleMain [options]", "Demonstrates the CLA API.",
+      Seq(input, output, logLevel, path, others)).parse(argstrings)
 
     process(args, argstrings)
   }
@@ -71,28 +125,31 @@ There is also a more general `seq[V]` helper, where the string is first split, t
 
 The first two arguments to the `Args.apply()` method provide help strings. The first shows how to run the application, e.g., `run-main CLASampleMain` as shown, or perhaps `java -cp ... foo.bar.Main`, etc. The string is arbitrary. The second string is an optional description of the program. Finally, a `Seq[Opt[V]]` specifies the actual options supported.
 
-Before discussing the `process` method shown, here is an alternative way to declare `Args`, in `main2`:
-
-
+Here is a slightly more concise way to write the content in `main2`:
 
 ```scala
-  def main2(argstrings: Array[String]) = {
+  ...
+  def main3(argstrings: Array[String]) = {
     import Opt._
-    val args = Args("run-main CLASampleMain", "Demonstrates the CLA API.",
+    import Args._
+    val args = Args("run-main CLASampleMain [options]", "Demonstrates the CLA API.",
       Seq(
         string("input",     Seq("-i", "--in", "--input"),      None,              "Path to input file."),
         string("output",    Seq("-o", "--out", "--output"),    Some("/dev/null"), "Path to output file."),
         int(   "log-level", Seq("-l", "--log", "--log-level"), Some(3),           "Log level to use."),
         seqString("[:;]")(
-               "path",      Seq("-p", "--path"),               None,              "Path elements separated by ':' or ';'.")))
+               "path",      Seq("-p", "--path"),               None,              "Path elements separated by ':' (*nix) or ';' (Windows)."),
+        makeRemainingOpt(
+               "others",                                                          "Other arguments")))
 
     process(args, argstrings)
   }
+  ...
 ```
 
 This is more concise, but harder to follow.
 
-The `process` method uses the `Args`. It first parses the user-specified arguments, returning a new `Args` instance with updated (or default) values for each argument.
+The `process` method uses the [Args](src/main/scala/com/concurrentthought/cla/Args.scala). It first parses the user-specified arguments, returning a new `Args` instance with updated values for each argument.
 
 ```
   protected def process(args: Args, argstrings: Array[String]): Unit = {
@@ -109,7 +166,7 @@ If errors occurred or help was requested, print the appropriate messages and exi
     ...
 ```
 
-Otherwise, print all the default values or those specified by the user to the command line.
+Otherwise, print all the options and the current values for them, either the defaults or the user-specified values.
 
 ```
     ...
@@ -117,12 +174,16 @@ Otherwise, print all the default values or those specified by the user to the co
     ...
 ```
 
-Finally, extract values and use them.
+Finally, extract values and use them. In the last code here, we look at the so-called *remaining* tokens, those not associated with flags.
 
 ```
     ...
     setPathElements(parsedArgs.get[Seq[String]]("path"))
     setLogLevel(parsedArgs.getOrElse("log-level", 0))
+
+    println("\nYou gave the following \"other\" arguments: " +
+      parsedArgs.remaining.mkString(", "))
+    println
   }
 
   protected def setPathElements(path: Option[Seq[String]]) = path match {
@@ -135,11 +196,16 @@ Finally, extract values and use them.
 }
 ```
 
-The `get[V]` method returns values of the expected type. It uses `asInstanceOf[]` internally, but it should never fail because the parsing process already converted the value to the correct type (and then put them in a `Map[String,Any]`).
+The `get[V]` method returns values of the expected type. It uses `asInstanceOf[]` internally, but it should never fail because the parsing process already converted the value to the correct type (and then put it in a `Map[String,Any]` used by `get[V]`).
 
  Note that an advantage of `getOrElse[V]` is that its type parameter can be inferred due to the second argument.
 
- Try running with the help option, `run-main CLASampleMain --help`, then play with the other options. Note the error handling that's done if you omit a value when an option expects one, or an invalid value is given, such as `--log-level foo`.
+ Try running the following examples within SBT:
 
+```
+ run-main com.concurrentthought.cla.CLASampleMain -h
+ run-main com.concurrentthought.cla.CLASampleMain --help
+ run-main com.concurrentthought.cla.CLASampleMain -i /in -o /out -l 4 -p "a:b" --things "x-y|z" foo bar baz
+```
 
-
+Try a few runs with unknown flags and other errors. Note the error handling that's done, such as when you omit a value expected by a flag, or you provide an invalid value, such as `--log-level foo`.
