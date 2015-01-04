@@ -2,7 +2,7 @@ package com.concurrentthought.cla
 
 /**
  * Format a help message for the command-line invocation of a program, based
- * on the `Args` object passed to `apply`. 
+ * on the `Args` object passed to `apply`.
  */
 object Help {
   /** Arbitrary maximum width for the descriptive string after the options. */
@@ -27,7 +27,7 @@ object Help {
       args.failures.map{ case (flag, err) => s"  $err" }.toVector
 
   protected def argsHelp(args: Args): Vector[String] = {
-    val strings = args.opts.map(a => (toFlagsHelp(a), toHelp(a)))
+    val strings = args.opts.map(o => (toFlagsHelp(o), toHelp(o)))
     val maxFlagLen = strings.unzip._1.maxBy(_.size).size
     val fmt = s"%-${maxFlagLen}s    %s"
     strings.foldLeft(Vector.empty[String]) {
@@ -38,13 +38,16 @@ object Help {
     }
   }
 
-  protected def toFlagsHelp(arg: Opt[_]): String =
-    arg.flags.mkString("  ", " | ", "")
+  /** Handles the special case of a no-flags option, used for other command-line tokens. */
+  protected def toFlagsHelp(opt: Opt[_]): String = {
+    val s = opt.flags.mkString("  ", " | ", "")
+    if (s.trim.length == 0) "  "+opt.name else s
+  }
 
-  protected def toHelp(arg: Opt[_]): Vector[String] = {
-    val h = arg.help
+  protected def toHelp(opt: Opt[_]): Vector[String] = {
+    val h = opt.help
     val hs = if (h.length > Help.maxHelpWidth) wrap(h) else Vector(h)
-    arg.default match {
+    opt.default match {
       case None => hs
       case Some(d) => d match {
         case b: Boolean => hs  // suppress!

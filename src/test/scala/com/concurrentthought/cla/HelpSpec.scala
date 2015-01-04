@@ -18,7 +18,7 @@ class HelpSpec extends FunSpec {
   describe ("Help") {
     it ("returns a help string based on the command-line arguments") {
       val args = Args("java HelpSpec", "A ScalaTest for the Help class.",
-                      Seq(inOpt, outOpt, Opt.quietFlag))
+                      Seq(inOpt, outOpt, Args.quietFlag))
       val help = Help(args)
       assert(help ===
         s"""Usage: java HelpSpec [options]
@@ -32,6 +32,7 @@ class HelpSpec extends FunSpec {
         |  -o | --o | --out | --output    Output files.
         |                                 (default: /dev/null)
         |  -q | --quiet                   Minimize output messages.
+        |  remaining                      All remaining arguments that aren't associated with flags.
         |""".stripMargin)
     }
 
@@ -41,6 +42,7 @@ class HelpSpec extends FunSpec {
         |
         |Where the supported options are the following:
         |  -h | --h | --help    Show this help message.
+        |  remaining            All remaining arguments that aren't associated with flags.
         |""".stripMargin)
     }
 
@@ -57,6 +59,7 @@ class HelpSpec extends FunSpec {
         |  -h | --h | --help    Show this help message.
         |  -i | --i | --int     int help message
         |                       (default: 0)
+        |  remaining            All remaining arguments that aren't associated with flags.
         |""".stripMargin)
     }
   }

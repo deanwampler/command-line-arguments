@@ -19,12 +19,17 @@ case class Args protected (
   defaults: Map[String,Any],
   values: Map[String,Any],
   allValues: Map[String,Seq[Any]],
+  remaining: Seq[String],
   failures: Seq[(String,Any)]) {
 
   def help: String = Help(this)
 
-  lazy val parserChain: Opt.Parser[Any] =
-    opts map (_.parser) reduceLeft (_ orElse _) orElse noOptionMatch orElse defaultMatch
+  // We want the unknownOptionMatch to be just before the "remaining" option.
+  val remainingOpt = opts.find(_.flags.size == 0).get
+  val remainingOptName = remainingOpt.name
+  val opts2: Seq[Opt[_]] = opts.filter(_.name != remainingOptName)
+  lazy val parserChain: Opt.Parser[_] =
+    opts2.map(_.parser) reduceLeft (_ orElse _) orElse unknownOptionMatch orElse remainingOpt.parser
 
   /**
    * Parse the user-specified arguments, using `parserChain`. Note that if
@@ -42,9 +47,9 @@ case class Args protected (
         }
       } catch {
         case e @ Args.UnrecognizedArgument(head, tail) => (head, e) +: p(tail)
-        // Otherwise, assume that attempting to parse the value failed, so
-        // we skip to seq.tail.tail.
-        case NonFatal(nf) => (seq.head, nf) +: p(seq.tail.tail)
+        // Otherwise, assume that attempting to parse the value failed, but
+        // perhaps it's the next option?
+        case NonFatal(nf) => (seq.head, nf) +: p(seq.tail)
       }
     }
 
@@ -53,33 +58,31 @@ case class Args protected (
       case _ => false
     }
 
-    val newAllDefaultValues = Args.defaults(opts).map {
-      case (key,value) => (key,Vector(value))
-    }.toMap
-    val newAllActualValues = successes.foldLeft(Map.empty[String,Vector[Any]]){
+    // The "remaining" values aren't included in the values and allValues maps,
+    // but handled separately.
+    val newAllValues = allValues ++ successes.foldLeft(Map.empty[String,Vector[Any]]){
       case (map, (key, value)) =>
-        val newVect = map.getOrElse(key, Vector.empty) :+ value
+        val newVect = map.get(key) match {
+          case None => Vector(value)
+          case Some(v) => v :+ value
+        }
         map + (key -> newVect)
-    }
-
-    // Special handling for "remaining" arguments. We want the "values" to contain
-    // all of them, not just the last one seen.
-    val remaining = newAllActualValues.getOrElse(Args.REMAINING_KEY, Vector.empty[String])
-    // (In case it wasn't present, add it now...)
-    val newAllActualValues2 = newAllActualValues + (Args.REMAINING_KEY -> remaining)
-    val newValues = Args.defaults(opts) ++ successes.toMap + (Args.REMAINING_KEY -> remaining)
-    val newAllValues = newAllDefaultValues ++ newAllActualValues2
-
-    copy(values = newValues, allValues = newAllValues, failures = failures)
+    } - remainingOptName
+    val newValues = values ++ successes.toMap - remainingOptName
+    // The remaining defaults are replaced by the new tokens:
+    val newRemaining = successes.filter(_._1 == remainingOptName).map(_._2.toString).toVector
+    copy(values = newValues, allValues = newAllValues, remaining = newRemaining, failures = failures)
   }
 
   import scala.reflect.ClassTag
+
 
   /**
    * Return the value for the option. This will be either the default specified,
    * if the user did not invoke the option, or the _last_ invocation of the
    * command line option. In other words, if the argument list contains
    * `--foo bar1 --foo bar2`, then `Some("bar2")` is returned.
+   * Note: Use `remaining` to get the tokens not associated with a flag.
    * @see getAll
    */
   def get[V : ClassTag](flag: String): Option[V] =
@@ -88,6 +91,7 @@ case class Args protected (
   /**
    * Like `get`, but an alternative is specified, if no value for the option
    * exists, so the return value is of type `V`, rather than `Option[V]`.
+   * Note: Use `remaining` to get the tokens not associated with a flag.
    */
   def getOrElse[V : ClassTag](flag: String, orElse: V): V =
     values.getOrElse(flag, orElse).asInstanceOf[V]
@@ -104,11 +108,16 @@ case class Args protected (
    * If the user specified one or more invocations, then all of the values
    * are returned in `Seq`. For example, for `--foo bar1 --foo bar2`, then
    * this method returns `Seq("bar1", "bar2")`.
+   * Note: Use `remaining` to get the tokens not associated with a flag.
    * @see get
    */
   def getAll[V : ClassTag](flag: String): Seq[V] =
     allValues.getOrElse(flag, Nil).map(_.asInstanceOf[V])
 
+  /**
+   * Like `getAll`, but an alternative is specified, if no value for exists.
+   * Note: Use `remaining` to get the tokens not associated with a flag.
+   */
   def getAllOrElse[V : ClassTag](flag: String, orElse: Seq[V]): Seq[V] =
     allValues.getOrElse(flag, orElse).map(_.asInstanceOf[V])
 
@@ -121,14 +130,9 @@ case class Args protected (
    * `printAllValues`.
    * @see printAllValues
    */
-  def printValues(out: PrintStream = Console.out): Unit = {
-    out.println("\nCommand line arguments:")
-    val keys = (opts.map(_.name)) :+ Args.REMAINING_KEY
-    val max = keys.maxBy(_.size).size
-    val fmt = s"  %${max}s: %s"
-    keys.foreach(key => out.println(fmt.format(key, values.getOrElse(key, Vector.empty[String]))))
-    out.println()
-  }
+  def printValues(out: PrintStream = Console.out): Unit =
+    doPrintValues(out, "")(
+      key => values.getOrElse(key, ""))
 
   /**
    * Print all the current values. Before any parsing is done, the values are
@@ -137,14 +141,20 @@ case class Args protected (
    * all values are shown.
    * @see printValues
    */
-  def printAllValues(out: PrintStream = Console.out): Unit = {
-    out.println("\nCommand line arguments (all values given):")
-    val keys = (opts.map(_.name)) :+ Args.REMAINING_KEY
+  def printAllValues(out: PrintStream = Console.out): Unit =
+    doPrintValues(out, " (all values given)")(
+      key => allValues.getOrElse(key, Vector.empty[String]))
+
+  private def doPrintValues[V](out: PrintStream, suffix: String)(get: String => V): Unit = {
+    out.println(s"\nCommand line arguments$suffix:")
+    val keys = opts.map(_.name)
     val max = keys.maxBy(_.size).size
     val fmt = s"  %${max}s: %s"
-    keys.foreach(key => out.println(fmt.format(key, allValues.getOrElse(key, Vector.empty[String]))))
+    keys.filter(_ != remainingOptName).foreach(key => out.println(fmt.format(key, get(key))))
+    out.println(fmt.format(remainingOptName, remaining))
     out.println()
   }
+
 
   /**
    * Was the help option invoked?
@@ -152,7 +162,7 @@ case class Args protected (
    * Otherwise, return false. Callers may wish to exit if true is returned.
    */
   def handleHelp(out: PrintStream = Console.out): Boolean =
-    get[Boolean]("help") match {
+    get[Boolean](Args.HELP_KEY) match {
       case Some(true) => out.println(help); true
       case _ => false
     }
@@ -169,22 +179,31 @@ case class Args protected (
     }
     else false
 
-  protected val noOptionRE = "(--?.+)".r
+  protected val unknownOptionRE = "(--?.+)".r
 
-  /** No option that starts with one or two '-' matches! */
-  protected val noOptionMatch: Opt.Parser[Any] = {
-    case noOptionRE(flag) +: tail => throw Args.UnrecognizedArgument(flag, tail)
+  /** Unknown option that starts with one or two '-' matches! */
+  protected val unknownOptionMatch: Opt.Parser[Any] = {
+    case unknownOptionRE(flag) +: tail => throw Args.UnrecognizedArgument(flag, tail)
   }
 
-  /** Handle any unmatched argument that isn't a flag (i.e., starts with one or two '-'). */
-  protected val defaultMatch: Opt.Parser[Any] = {
-    case head +: tail => ((Args.REMAINING_KEY, Success(head)), tail)
-  }
+  override def toString = s"""Args:
+  |  program invocation: $programInvocation
+  |         description: $description
+  |                opts: $opts
+  |            defaults: $defaults
+  |              values: $values
+  |           allValues: $allValues
+  |           remaining: $remaining
+  |            failures: $failures
+  |""".stripMargin
+
 }
 
 object Args {
 
+  val HELP_KEY      = "help"
   val REMAINING_KEY = "remaining"
+
   val defaultProgramInvocation: String = "java -cp ..."
   val defaultDescription: String = ""
 
@@ -217,14 +236,89 @@ object Args {
     opts: Seq[Opt[_]],
     defaults: Map[String,Any],
     values: Map[String,Any]): Args = {
-      val opts2      = if (opts.exists(_.name == "help")) opts else (Opt.helpFlag +: opts)
-      val defaults2  = defaults + ("help" -> defaults.getOrElse("help", false))
-      val valuesHelp = values.getOrElse("help", defaults2("help"))
-      val values2    = values   + ("help" -> valuesHelp)
-      val allValues  = values2.map{ case (k,v) => (k,Vector(v)) }
-      val failures   = Seq.empty[(String,Any)]
 
-      new Args(programInvocation, description, opts2, defaults2, values2, allValues, failures)
+    val noFlagOpts = opts.filter(_.flags.size == 0)
+    require(noFlagOpts.size <= 1, "At most one option can have no flags, used for all command-line tokens not associated with flags.")
+
+    // Add opts or help at the beginning and "remaining" (no flag) tokens at
+    // the end, if necessary. Also, add defaults and values for the extra
+    // options, if needed.
+    var opts1 = opts.toVector
+    var defaults1 = defaults
+    var values1 = values
+    var remaining1 = Vector.empty[String]
+    if (opts1.exists(_.name == HELP_KEY) == false) {
+      opts1 = helpFlag +: opts1
+      val hf = (HELP_KEY -> false)
+      defaults1 = defaults1 + hf
+      values1   = values1   + hf
+    }
+    if (noFlagOpts.size == 0) {
+      opts1 = opts1 :+ remainingOpt
+    } else {
+      // Make sure the remaining values aren't in "defaults1" or "values1", but update "remaining1"
+      val noFlagName = noFlagOpts.head.name
+      defaults1  -= noFlagName
+      values1    -= noFlagName
+      remaining1  = noFlagOpts.head.default match {
+        case Some(s) => s match {
+          case s: Seq[_] => s.map(_.toString).toVector // _ should already be String, but erasure...
+          case x => Vector(x.toString)
+        }
+        case None => Vector.empty[String]
+        case x => throw new RuntimeException(s"$x in $noFlagOpts")
+      }
+    }
+    val allValues1 = values1.map{ case (k,v) => (k,Vector(v)) }
+    val failures1  = Seq.empty[(String,Any)]
+    new Args(programInvocation, description, opts1, defaults1, values1, allValues1, remaining1, failures1)
+  }
+
+  // Common options.
+
+  /** Show Help. Normally the program will exit afterwards. */
+  val helpFlag = Flag(
+    name   = HELP_KEY,
+    flags  = Seq("-h", "--h", "--help"),
+    help   = "Show this help message.")
+
+  /** Minimize logging and other output. */
+  val quietFlag = Flag(
+    name  = "quiet",
+    flags = Seq("-q", "--quiet"),
+    help  = "Minimize output messages.")
+
+  /**
+   * A special option for "remaining" or "bare" tokens that aren't associated with a flag.
+   * Note that it has no flags; only one such option is allowed in an `Args`.
+   */
+  def makeRemainingOpt(
+    name: String = REMAINING_KEY,
+    help: String = "All remaining arguments that aren't associated with flags.") =
+      new OptWithValue[String](name = name, flags = Nil, help = help)(s => Try(s)) {
+
+        /** Now there are no flags expected as the first token. */
+        override val parser: Opt.Parser[String] = {
+          case value +: tail => ((name, Success(value)), tail)
+        }
+      }
+
+  val remainingOpt = makeRemainingOpt()
+
+  /** Socket host and port. */
+  val socketOpt = Opt[(String,Int)](
+    name    = "socket",
+    flags   = Seq("-s", "--socket"),
+    help    = "Socket host:port.") { s =>
+      val array = s.split(":")
+      if (array.length != 2) Failure(Opt.InvalidValueString("--socket", s))
+      else {
+        val host = array(0)
+        Try(array(1).toInt) match {
+          case Success(port) => Success(host -> port)
+          case Failure(th)   => Failure(Opt.InvalidValueString("--socket", s"$s (not an int?)", Some(th)))
+        }
+      }
     }
 
   case class UnrecognizedArgument(arg: String, rest: Seq[String])

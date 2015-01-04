@@ -11,6 +11,9 @@ package object dsl {
    * Specify the command-line arguments using a single, multi-line string.
    * Note the following example:
    * {{{
+   * import com.concurrentthought.cla._
+   * import com.concurrentthought.cla.dsl._
+   *
    * val args: Args = """
    *   |java -cp foo
    *   |Some description
@@ -19,16 +22,42 @@ package object dsl {
    *   |  -o | --out | --output     string=/dev/null    Path to output file.
    *   |  -l | --log | --log-level  int=3               Log level to use.
    *   |  -p | --path               path                Path elements separated by ':' (*nix) or ';' (Windows).
-   *   |       --things             seq([-\|])          Path elements separated by '-' or '|'.
-   *   |                            args                Other stuff.
+   *   |       --things             seq([-|])           String elements separated by '-' or '|'.
+   *   |                            others              Other stuff.
    *   |""".stripMargin.toArgs
    * }}}
+   * The format, as illustrated in the example, has the following requirements:
+   * <ol>
+   * <li>The leading lines without opening whitespace are interpreted as the
+   *   "program invocation" string in the help message, followed by zero or more
+   *   description lines, which will be concatenated together (separated by
+   *   whitespace) in the help message.</li>
+   * <li>Each option appears on a line with leading whitespace.</li>
+   * <li>Each option has one or more flags, separated by "|". As a special case,
+   *   one option can have no flags. It is used to provide a help message for all other
+   *   command-line tokens that aren't associated with flags (which will be stored
+   *   in `Args.remaining`).
+   *   Note that these tokens are handled whether or not you specify a line like
+   *   this or not.</li>
+   * <li>After the flags, the "middle column" describes the type of option and
+   *   optionally a default value. The types correspond to several helper functions
+   *   in `Opt`: `string`, `byte`, `char`, `int`, `long`, `float`, `double`, `path`,
+   *   and `seqString`, where the string "seq" is used, followed by a required
+   *   `(delim)` suffix to specify the delimiter regex, as shown in the example.
+   *   The `=` indicates the default value to use, if present. Current limitations
+   *   of the type specification include the following: (i) `Opt.seq[V]` isn't
+   *   supported in this mechanism, (ii) default values can't be specified for
+   *   the `path` or `seq` types, nor for the no-flag case (an implementation limitation).
+   * <li>The remaining text is interpreted as the help string.</li>
+   * </ol>
+   *
    * @note This is an experimental feature. There are several known limitations:
    * <ol>
-   * <li>It provides no way to use the predefined flags like `Opt.quietFlag`.</li>
+   * <li>It provides no way to use the predefined flags like `Args.quietFlag`,
+   *   although `Args.helpFlag` and `Args.remainingOpt` are automatically added
+   *   if the list of options doesn't explicitly define help and no-flag constructs.</li>
    * <li>The general case of `Opt.seq[V]` isn't supported, only `Opt.seqString`.</li>
-   * <li>It's somewhat fragile and easy to break.</li>
-   * <li>It has been tested yet on many example.</li>
+   * <li>It needs to be tested on a lot more examples.</li>
    * </ol>
    */
   implicit class ToArgs(str: String) {
@@ -56,7 +85,7 @@ package object dsl {
         }
         // Use the LAST flag name (without the leading "-") as the name.
         // For the case where there is no flag, use "remaining".
-        val name = if (flags.size == 0) "remaining" else flags.last.replaceAll("^--?", "")
+        val name = if (flags.size == 0) Args.REMAINING_KEY else flags.last.replaceAll("^--?", "")
         try {
           fromType(typ, name, flags, default, help)
         } catch {
@@ -82,7 +111,7 @@ package object dsl {
           println("com.concurrentthought.cla.dsl: WARNING, bare 'seq' (vs. 'seq(delim)') found. Using Opt.path.")
           Opt.path(name, flags, default.map(s => Seq(s)), help)
         case "path"       => Opt.path(name, flags, default.map(s => Seq(s)), help)
-        case _ if (flags.size == 0) => Opt.string(Args.REMAINING_KEY, flags, default, help)
+        case name if (flags.size == 0) => Args.makeRemainingOpt(name, help)
         case _ => throw new InvalidTypeInArgsString(typ, "")
       }
     }

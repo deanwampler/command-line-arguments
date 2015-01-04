@@ -68,36 +68,6 @@ object Opt {
     help:       String = "")(fromString: String => Try[V]) =
       OptWithValue[V](name, flags, default, help)(fromString)
 
-  // Common options.
-
-  /** Show Help. Normally the program will exit afterwards. */
-  val helpFlag = Flag(
-    name   = "help",
-    flags  = Seq("-h", "--h", "--help"),
-    help   = "Show this help message.")
-
-  /** Minimize logging and other output. */
-  val quietFlag = Flag(
-    name  = "quiet",
-    flags = Seq("-q", "--quiet"),
-    help  = "Minimize output messages.")
-
-  /** Socket host and port. */
-  val socketFlag = Opt[(String,Int)](
-    name  = "socket",
-    flags = Seq("-s", "--socket"),
-    help  = "Socket host:port.") { s =>
-      val array = s.split(":")
-      if (array.length != 2) Failure(InvalidValueString("--socket", s))
-      else {
-        val host = array(0)
-        Try(array(1).toInt) match {
-          case Success(port) => Success(host -> port)
-          case Failure(th)   => Failure(InvalidValueString("--socket", s"$s (not an int?)", Some(th)))
-        }
-      }
-    }
-
   // Helper methods to create options.
 
   /** Create a String option */

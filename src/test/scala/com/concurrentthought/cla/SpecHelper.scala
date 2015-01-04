@@ -64,9 +64,15 @@ object SpecHelper {
     flags    = Seq("-p", "--path"),
     default  = Some(Nil))
 
+  val othersOpt = Args.makeRemainingOpt(
+    name     = "others",
+    help     = "Other tokens")
+
   val pathDelim = sys.props.getOrElse("path.separator",":")
 
-  val allOpts = Seq(stringOpt, byteOpt, charOpt, intOpt, longOpt,
+  protected val allOpts1 = Vector(stringOpt, byteOpt, charOpt, intOpt, longOpt,
     floatOpt, doubleOpt, seqOpt, seqStringOpt, pathOpt)
-  val allDefaults = allOpts.map(o => (o.name, o.default.get)).toMap + ("help" -> false)
+  val allOpts = allOpts1 :+ othersOpt
+  val allDefaults = allOpts1.map(o => (o.name, o.default.get)).toMap + (Args.HELP_KEY -> false)
+  val allRemaining = Vector.empty[String]
 }

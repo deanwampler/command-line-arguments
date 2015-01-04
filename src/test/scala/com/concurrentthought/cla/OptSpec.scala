@@ -61,63 +61,6 @@ class OptSpec extends FunSpec {
       }
     }
 
-    describe ("helpFlag") {
-      it ("defines a help option") {
-        assert(Opt.helpFlag.default === Some(false))
-      }
-      it ("doesn't consume a value") {
-        val result = Opt.helpFlag.parser(Seq("--help", "one", "two"))
-        assert(("help", Success(true)) === result._1)
-        assert(Seq("one", "two") === result._2)
-      }
-    }
-
-    describe ("quietFlag") {
-      it ("defines a quiet option") {
-        assert(Opt.quietFlag.default === Some(false))
-      }
-      it ("doesn't consume a value") {
-        val result = Opt.quietFlag.parser(Seq("--quiet", "one", "two"))
-        assert(("quiet", Success(true)) === result._1)
-        assert(Seq("one", "two") === result._2)
-      }
-    }
-
-    describe ("socketFlag") {
-      it ("defines a socket (host:port) option") {
-        assert(Opt.socketFlag.default === None)
-      }
-
-      describe ("""requires a string of the form "host:port" option""") {
-        it ("succeeds if the host is a name or IP address and the port is an integer") {
-          val expected = (("socket", Try(("host", 123))), Nil)
-          assert(Opt.socketFlag.parser(Seq("--socket", "host:123")) === expected)
-        }
-        it ("returns a Failure(Opt.InvalidValueString) if the :port is missing") {
-          Opt.socketFlag.parser(Seq("--socket", "host"))
-          val result = Opt.socketFlag.parser(Seq("--socket", "host", "--bar"))
-          val r1 = ("socket", Failure(Opt.InvalidValueString("--socket", "host", None)))
-          val r2 = Seq("--bar")
-          assert((r1, r2) === result)
-        }
-        it ("returns a Failure(Opt.InvalidValueString) if the host: is missing") {
-          val result = Opt.socketFlag.parser(Seq("--socket", "123", "--bar"))
-          val r1 = ("socket", Failure(Opt.InvalidValueString("--socket", "123", None)))
-          val r2 = Seq("--bar")
-          assert((r1, r2) === result)
-        }
-        it ("returns a Failure(Opt.InvalidValueString) if the port is not an integer") {
-          Opt.socketFlag.parser(Seq("--socket", "host:foo", "--bar")) match {
-            case (("socket", Failure(failure)), Seq("--bar")) => failure match {
-              case Opt.InvalidValueString("--socket", "host:foo (not an int?)", Some(th)) => /* pass */
-              case _ => fail("Unexpected exception: "+failure)
-            }
-            case badResult => fail(badResult.toString)
-          }
-        }
-      }
-    }
-
     describe ("char() constructs a Char option") {
       it ("returns the first character of the value string") {
         val result = charOpt.parser(Seq("--char", "foo", "one", "two"))
@@ -278,7 +221,7 @@ class OptSpec extends FunSpec {
 
     it ("allows an empty help message") {
       Flag(
-        name    = "help",
+        name    = Args.HELP_KEY,
         flags   = Seq("-h", "--h", "--help"))
     }
 
@@ -291,13 +234,13 @@ class OptSpec extends FunSpec {
     }
 
     it ("does not consume any values in the argument list.") {
-      val result = Opt.helpFlag.parser(Seq("--help", "one", "two"))
+      val result = Args.helpFlag.parser(Seq("--help", "one", "two"))
       assert(Seq("one", "two")   === result._2)
     }
 
     it ("returns true if the option is used.") {
-      val result = Opt.helpFlag.parser(Seq("--help", "one", "two"))
-      assert(("help", Success(true)) === result._1)
+      val result = Args.helpFlag.parser(Seq("--help", "one", "two"))
+      assert((Args.HELP_KEY, Success(true)) === result._1)
     }
   }
 
