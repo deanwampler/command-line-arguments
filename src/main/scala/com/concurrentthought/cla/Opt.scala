@@ -196,13 +196,18 @@ case class OptWithValue[V] (
   default: Option[V] = None,
   help:    String = "")(fromString: String => Try[V]) extends Opt[V] {
 
+  protected val opteqRE = "^([^=]+)=(.*)$".r
+
   val parser: Opt.Parser[V] = {
-    case flag +: value +: tail if flags.contains(flag) => fromString(value) match {
-      case sv @ Success(v)  => ((name, sv), tail)
-      case Failure(ex) => ex match {
-        case ivs: Opt.InvalidValueString => ((name, Failure(ivs)), tail)
-        case ex => ((name, Failure(Opt.InvalidValueString(flag, value, Some(ex)))), tail)
-      }
+    case opteqRE(flag, value) +: tail if flags.contains(flag) => parserHelper(flag, value, tail)
+    case flag +: value +: tail if flags.contains(flag) => parserHelper(flag, value, tail)
+  }
+
+  protected def parserHelper(flag: String, value: String, tail: Seq[String]) = fromString(value) match {
+    case sv @ Success(v)  => ((name, sv), tail)
+    case Failure(ex) => ex match {
+      case ivs: Opt.InvalidValueString => ((name, Failure(ivs)), tail)
+      case ex => ((name, Failure(Opt.InvalidValueString(flag, value, Some(ex)))), tail)
     }
   }
 }

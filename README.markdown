@@ -198,14 +198,18 @@ Finally, extract values and use them. In the last code here, we look at the so-c
 
 The `get[V]` method returns values of the expected type. It uses `asInstanceOf[]` internally, but it should never fail because the parsing process already converted the value to the correct type (and then put it in a `Map[String,Any]` used by `get[V]`).
 
- Note that an advantage of `getOrElse[V]` is that its type parameter can be inferred due to the second argument.
+Note that an advantage of `getOrElse[V]` is that its type parameter can be inferred due to the second argument.
 
- Try running the following examples within SBT:
+Try running the following examples within SBT (`run` and `run-main com.concurrentthought.cla.CLASampleMain` do the same thing):
 
 ```
  run-main com.concurrentthought.cla.CLASampleMain -h
- run-main com.concurrentthought.cla.CLASampleMain --help
- run-main com.concurrentthought.cla.CLASampleMain -i /in -o /out -l 4 -p "a:b" --things "x-y|z" foo bar baz
+ run -h
+ run --help
+ run -i /in -o /out -l 4 -p a:b --things x-y|z foo bar baz
+ run --in /in --out=/out -l=4 --path "a:b" --things=x-y|z foo bar baz
 ```
+
+The last example mixes `flag value` and `flag=value` syntax, which of are both supported.
 
 Try a few runs with unknown flags and other errors. Note the error handling that's done, such as when you omit a value expected by a flag, or you provide an invalid value, such as `--log-level foo`.

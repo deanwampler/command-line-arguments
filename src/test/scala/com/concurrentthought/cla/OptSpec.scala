@@ -40,10 +40,35 @@ class OptSpec extends FunSpec {
       assert(stringOpt.default === Some("foobar"))
     }
 
-    it ("provides a parser to extract the option flag and (optional) value") {
-      val result = stringOpt.parser(Seq("--string", "foo", "one", "two"))
-      assert(("string", Success("foo")) === result._1)
-      assert(Seq("one", "two") === result._2)
+    describe("parsing tokens") {
+      it ("extracts the flag and (optional) value from the sequence") {
+        val result = stringOpt.parser(Seq("--string", "foo", "one", "two"))
+        assert(("string", Success("foo")) === result._1)
+        assert(Seq("one", "two") === result._2)
+      }
+      it ("handles 'flag=value' or 'flag value' forms") {
+        val result = stringOpt.parser(Seq("--string", "foo", "one", "two"))
+        assert(("string", Success("foo")) === result._1)
+        assert(Seq("one", "two") === result._2)
+        val result2 = stringOpt.parser(Seq("--string=foo", "one", "two"))
+        assert(("string", Success("foo")) === result2._1)
+        assert(Seq("one", "two") === result2._2)
+      }
+      it ("converts the value to the expected type") {
+        val result = intOpt.parser(Seq("--int", "1234", "one", "two"))
+        assert(("int", Success(1234)) === result._1)
+        assert(Seq("one", "two") === result._2)
+      }
+      it ("returns a Failure if the value can't be converted to the expected type") {
+        val result = intOpt.parser(Seq("--int", "xyz", "one", "two"))
+        val (name, Failure(ex)) = result._1
+        assert("int" === name)
+        ex match {
+          case Opt.InvalidValueString("--int", "xyz", _) => /* okay */
+          case _ => fail(ex.toString)
+        }
+        assert(Seq("one", "two") === result._2)
+      }
     }
   }
 
