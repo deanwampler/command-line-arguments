@@ -6,7 +6,7 @@ package com.concurrentthought.cla
  * {{{
  * run-main CLASampleMain -h
  * run-main CLASampleMain --help
- * run-main CLASampleMain -i /in -o /out -l 4 -p a:b --things a-b|c foo bar baz
+ * run-main CLASampleMain -i /in -o /out -l 4 -p a:b --things x-y|z foo bar baz
  * }}}
  */
 object CLASampleMain {
