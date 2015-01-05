@@ -31,7 +31,7 @@ class HelpSpec extends FunSpec {
         |                                 (default: /data/input)
         |  -o | --o | --out | --output    Output files.
         |                                 (default: /dev/null)
-        |  -q | --quiet                   Minimize output messages.
+        |  -q | --quiet                   Suppress some verbose output.
         |  remaining                      All remaining arguments that aren't associated with flags.
         |""".stripMargin)
     }

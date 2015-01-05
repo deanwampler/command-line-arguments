@@ -8,7 +8,7 @@ package com.concurrentthought.cla
  * run -h
  * run --help
  * run -i /in -o /out -l 4 -p a:b --things x-y|z foo bar baz
- * run --in /in --out=/out -l=4 --path "a:b" --things=x-y|z foo bar baz
+ * run --in /in --out=/out -l=4 --path "a:b" --things=x-y|z -q foo bar baz
  * }}}
  * The last example demonstrates that both `flag value` and `flag=value` syntax
  * is supported.
@@ -24,6 +24,7 @@ object CLASampleMain {
       |  -l | --log | --log-level  int=3               Log level to use.
       |  -p | --path               path                Path elements separated by ':' (*nix) or ';' (Windows).
       |       --things             seq([-|])           String elements separated by '-' or '|'.
+      |  -q | --quiet              flag                Suppress some verbose output.
       |                            others              Other arguments.
       |""".stripMargin.toArgs
 
@@ -55,7 +56,7 @@ object CLASampleMain {
       help     = "Other arguments")
 
     val args = Args("run-main CLASampleMain [options]", "Demonstrates the CLA API.",
-      Seq(input, output, logLevel, path, others)).parse(argstrings)
+      Seq(input, output, logLevel, path, Args.quietFlag, others)).parse(argstrings)
 
     process(args, argstrings)
   }
@@ -74,13 +75,13 @@ object CLASampleMain {
         int(   "log-level", Seq("-l", "--log", "--log-level"), Some(3),           "Log level to use."),
         seqString("[:;]")(
                "path",      Seq("-p", "--path"),               None,              "Path elements separated by ':' (*nix) or ';' (Windows)."),
+        Args.quietFlag,
         makeRemainingOpt(
                "others",                                                          "Other arguments")))
 
     process(args, argstrings)
   }
 
-  // Another example:
   protected def process(args: Args, argstrings: Array[String]): Unit = {
     // Use the Args object to parse the user-specified arguments.
     val parsedArgs = args.parse(argstrings)
@@ -90,28 +91,34 @@ object CLASampleMain {
     if (parsedArgs.handleErrors()) sys.exit(1)
     if (parsedArgs.handleHelp())   sys.exit(0)
 
-    // Print all the default values or those specified by the user.
-    parsedArgs.printValues()
+    // Was quiet specified? If not, then write some stuff...
+    if (parsedArgs.getOrElse("quiet", false)) {
+      println("(... I'm being very quiet...)")
+    } else {
+      // Print all the default values or those specified by the user.
+      parsedArgs.printValues()
 
-    // Print all the values including repeats.
-    parsedArgs.printAllValues()
+      // Print all the values including repeats.
+      parsedArgs.printAllValues()
 
-    // Extract values and use them. Note that an advantage of getOrElse is that
-    // the type parameter for the function can be inferred. E.g., `[Int]` is
-    // inferred here.
-    setPathElements(parsedArgs.get[Seq[String]]("path"))
-    setLogLevel(parsedArgs.getOrElse("log-level", 0))
+      // Repeat the "other" arguments (not associated with flags).
+      println("\nYou gave the following \"other\" arguments: " +
+        parsedArgs.remaining.mkString(", "))
 
-    println("\nYou gave the following \"other\" arguments: " +
-      parsedArgs.remaining.mkString(", "))
-    println
+      // Extract values and use them. Note that an advantage of getOrElse is that
+      // the type parameter for the function can be inferred. E.g., `[Int]` is
+      // inferred here.
+      showPathElements(parsedArgs.get[Seq[String]]("path"))
+      showLogLevel(parsedArgs.getOrElse("log-level", 0))
+      println
+    }
   }
 
-  protected def setPathElements(path: Option[Seq[String]]) = path match {
-    case None => println("No path elements to set!")
+  protected def showPathElements(path: Option[Seq[String]]) = path match {
+    case None => println("No path elements to show!")
     case Some(seq) => println(s"Setting path elements to $seq")
   }
 
-  protected def setLogLevel(level: Int) =
-    println(s"Setting log level to $level")
+  protected def showLogLevel(level: Int) =
+    println(s"New log level: $level")
 }

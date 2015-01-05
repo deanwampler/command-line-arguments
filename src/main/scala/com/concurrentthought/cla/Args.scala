@@ -286,7 +286,7 @@ object Args {
   val quietFlag = Flag(
     name  = "quiet",
     flags = Seq("-q", "--quiet"),
-    help  = "Minimize output messages.")
+    help  = "Suppress some verbose output.")
 
   /**
    * A special option for "remaining" or "bare" tokens that aren't associated with a flag.

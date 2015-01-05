@@ -43,6 +43,7 @@ object CLASampleMain {
       |  -l | --log | --log-level  int=3               Log level to use.
       |  -p | --path               path                Path elements separated by ':' (*nix) or ';' (Windows).
       |       --things             seq([-|])           String elements separated by '-' or '|'.
+      |  -q | --quiet              flag                Suppress some verbose output.
       |                            others              Other arguments.
       |""".stripMargin.toArgs
 
@@ -61,6 +62,8 @@ The center "column" specifies the type of the option and an optional default val
 
 |   String | Interpretation  | Corresponding Helper Method    | Default Values Supported? |
 | -------: | :-------------- | :------------------------------ | :-------------- |
+| `flag`   | `Boolean` value | [Flag](src/main/scala/com/concurrentthought/cla/Opt.scala) (case class) | `false` (note 1) |
+| `~flag`   | `Boolean` value | [Flag](src/main/scala/com/concurrentthought/cla/Opt.scala) (case class) | `true` (note 1) |
 | `string` | `String` value  | [Opt.string](src/main/scala/com/concurrentthought/cla/Opt.scala) | yes |
 |   `byte` |   `Byte` value  | [Opt.byte](src/main/scala/com/concurrentthought/cla/Opt.scala) | yes |
 |   `char` |   `Char` value  | [Opt.char](src/main/scala/com/concurrentthought/cla/Opt.scala) | yes |
@@ -68,12 +71,13 @@ The center "column" specifies the type of the option and an optional default val
 |   `long` |   `Long` value  | [Opt.long](src/main/scala/com/concurrentthought/cla/Opt.scala) | yes |
 |  `float` |  `Float` value  | [Opt.float](src/main/scala/com/concurrentthought/cla/Opt.scala) | yes |
 | `double` | `Double` value  | [Opt.double](src/main/scala/com/concurrentthought/cla/Opt.scala) | yes |
-|  `path`  | "path-like" `Seq[String]` (note 1) | [Opt.path](src/main/scala/com/concurrentthought/cla/Opt.scala)   | no (note 2) |
-|   `seq`  | `Seq[String]` (note 1) | [Opt.seqString](src/main/scala/com/concurrentthought/cla/Opt.scala)            | no (note 2) |
-| *other*  | Only allowed for the single, no-flags case | [Args.remainingOpt](src/main/scala/com/concurrentthought/cla/Args.scala) | no (note 2) |
+|  `path`  | "path-like" `Seq[String]` (note 2) | [Opt.path](src/main/scala/com/concurrentthought/cla/Opt.scala)   | no (note 3) |
+|   `seq`  | `Seq[String]` (note 2) | [Opt.seqString](src/main/scala/com/concurrentthought/cla/Opt.scala)            | no (note 3) |
+| *other*  | Only allowed for the single, no-flags case | [Args.remainingOpt](src/main/scala/com/concurrentthought/cla/Args.scala) | no (note 3) |
 
-* **Note 1:** Both `path` and `seq` split an argument using the delimiter regex. For `path`, this is the platform-specific path separator, given by `sys.props.getOrElse("path.separator", ":")`. For `seq`, you must provide the delimiter regex using a suffix of the form `(delimRE)`, as shown in the example.
-* **Note 2:** It's an implementation limitation that default values can't be specified using this approach. You can do this if you build the [Args](src/main/scala/com/concurrentthought/cla/Args.scala) with the API, as shown below.
+* **Note 1:** Both `flag` and `~flag` represent `Boolean` flags where no value is supplied (e.g., `--help`). While `flag` defaults to `false` if not specified, `~flag` ("tilde" or "not" flag) defaults to `true`.
+* **Note 2:** Both `path` and `seq` split an argument using the delimiter regex. For `path`, this is the platform-specific path separator, given by `sys.props.getOrElse("path.separator", ":")`. For `seq`, you must provide the delimiter regex using a suffix of the form `(delimRE)`, as shown in the example.
+* **Note 3:** It's an implementation limitation that default values can't be specified using this approach. You can do this if you build the [Args](src/main/scala/com/concurrentthought/cla/Args.scala) with the API, as shown below.
 
 So, when an option expects something other than a `String`, the token given on the command line (or as a default here) will be parsed into the correct type, with error handling captured in the [Args.failures](src/main/scala/com/concurrentthought/cla/Args.scala) field.
 
@@ -107,7 +111,7 @@ Before discussing the `process` method shown, let's see two alternative, program
       help     = "Other arguments")
 
     val args = Args("run-main CLASampleMain [options]", "Demonstrates the CLA API.",
-      Seq(input, output, logLevel, path, others)).parse(argstrings)
+      Seq(input, output, logLevel, path, Args.quietFlag, others)).parse(argstrings)
 
     process(args, argstrings)
   }
@@ -123,7 +127,7 @@ There are also two helpers for command-line arguments that are strings that cont
 
 There is also a more general `seq[V]` helper, where the string is first split, then parsed into `V` instances. See [Opt.seq[V]](src/main/scala/com/concurrentthought/cla/Opt.scala) for more details.
 
-The first two arguments to the `Args.apply()` method provide help strings. The first shows how to run the application, e.g., `run-main CLASampleMain` as shown, or perhaps `java -cp ... foo.bar.Main`, etc. The string is arbitrary. The second string is an optional description of the program. Finally, a `Seq[Opt[V]]` specifies the actual options supported.
+The first two arguments to the `Args.apply()` method provide help strings. The first shows how to run the application, e.g., `run-main CLASampleMain` as shown, or perhaps `java -cp ... foo.bar.Main`, etc. The string is arbitrary. The second string is an optional description of the program. Finally, a `Seq[Opt[V]]` specifies the actual options supported. Note that we didn't define a `Flag` for quiet, as in the first example, instead we used a built-in flag `Args.quietFlag`.
 
 Here is a slightly more concise way to write the content in `main2`:
 
@@ -139,6 +143,7 @@ Here is a slightly more concise way to write the content in `main2`:
         int(   "log-level", Seq("-l", "--log", "--log-level"), Some(3),           "Log level to use."),
         seqString("[:;]")(
                "path",      Seq("-p", "--path"),               None,              "Path elements separated by ':' (*nix) or ';' (Windows)."),
+        Args.quietFlag,
         makeRemainingOpt(
                "others",                                                          "Other arguments")))
 
@@ -166,33 +171,46 @@ If errors occurred or help was requested, print the appropriate messages and exi
     ...
 ```
 
-Otherwise, print all the options and the current values for them, either the defaults or the user-specified values.
+Otherwise, if `--quiet` wasn't specified, then start printing information.
+
+First, print all the options and the current values for them, either the defaults or the user-specified values.
 
 ```
     ...
-    parsedArgs.printValues()
-    ...
+    if (parsedArgs.getOrElse("quiet", false)) {
+      println("(... I'm being very quiet...)")
+    } else {
+      // Print all the default values or those specified by the user.
+      parsedArgs.printValues()
+
+      // Print all the values including repeats.
+      parsedArgs.printAllValues()
+
+      // Repeat the "other" arguments (not associated with flags).
+      println("\nYou gave the following \"other\" arguments: " +
+        parsedArgs.remaining.mkString(", "))
+      ...
 ```
 
-Finally, extract values and use them. In the last code here, we look at the so-called *remaining* tokens, those not associated with flags.
+What's the difference between `printValues` and `printAllValues`. They address the case where the user should be able to repeat some options, for example, multiple sources of input, while other examples should only be used once. To simplify handling, the API remembers all occurrences of an option on the command line. The method `printAllValues` and the corresponding `getAll` and `getAllOrElse` methods print or return all occurrences seen, respectively. So, if you want an option to be repeatable, retrieve the results with `getAll` or `getAllOrElse`. Otherwise, use `get` and `getOrElse`, which return the *last* occurrence of an option (or the default, if any). This supports the common practice in POSIX systems of allowing subsequent option occurrences to override previous occurrences on a command line.
+
+Finally, we extract some other values and "use" them.
 
 ```
     ...
-    setPathElements(parsedArgs.get[Seq[String]]("path"))
-    setLogLevel(parsedArgs.getOrElse("log-level", 0))
-
-    println("\nYou gave the following \"other\" arguments: " +
-      parsedArgs.remaining.mkString(", "))
-    println
+      showPathElements(parsedArgs.get[Seq[String]]("path"))
+      showLogLevel(parsedArgs.getOrElse("log-level", 0))
+      println
+    }
   }
 
-  protected def setPathElements(path: Option[Seq[String]]) = path match {
-    case None => println("No path elements to set!")
+  protected def showPathElements(path: Option[Seq[String]]) = path match {
+    case None => println("No path elements to show!")
     case Some(seq) => println(s"Setting path elements to $seq")
   }
 
-  protected def setLogLevel(level: Int) =
-    println(s"Setting log level to $level")
+  protected def showLogLevel(level: Int) =
+    println(s"New log level: $level")
 }
 ```
 
@@ -207,6 +225,7 @@ Try running the following examples within SBT (`run` and `run-main com.concurren
  run -h
  run --help
  run -i /in -o /out -l 4 -p a:b --things x-y|z foo bar baz
+ run -i /in -o /out -l 4 -p a:b --things x-y|z foo bar baz --quiet
  run --in /in --out=/out -l=4 --path "a:b" --things=x-y|z foo bar baz
 ```
 

@@ -21,6 +21,7 @@ package object cla {
    *   |  -o | --out | --output     string=/dev/null    Path to output file.
    *   |  -l | --log | --log-level  int=3               Log level to use.
    *   |  -p | --path               path                Path elements separated by ':' (*nix) or ';' (Windows).
+   *   |  -q | --quiet              flag                Suppress some verbose output.
    *   |       --things             seq([-|])           String elements separated by '-' or '|'.
    *   |                            others              Other stuff.
    *   |""".stripMargin.toArgs
@@ -41,8 +42,10 @@ package object cla {
    * <li>After the flags, the "middle column" describes the type of option and
    *   optionally a default value. The types correspond to several helper functions
    *   in `Opt`: `string`, `byte`, `char`, `int`, `long`, `float`, `double`, `path`,
-   *   and `seqString`, where the string "seq" is used, followed by a required
-   *   `(delim)` suffix to specify the delimiter regex, as shown in the example.
+   *   `seqString`, where the string "seq" is used, followed by a required
+   *   `(delim)` suffix to specify the delimiter regex as shown in the example, and
+   *   `flag` which indicates a boolean flag where no value is expected, but the
+   *   flag's presence means `true` and absence means `false`.
    *   However, for a no-flag option, the value in this column is interpreted as a
    *   name for the option for the help message. This is the one case where the string
    *   isn't interpreted as a type specifier.
@@ -101,6 +104,8 @@ package object cla {
       name: String, flags: Seq[String], default: Option[String], help: String): Opt[_] = {
       val seqRE = """seq\(([^)]+)\)""".r
       typ match {
+        case "flag"       => Flag(name, flags, help)
+        case "~flag"      => Flag.reverseSense(name, flags, help)
         case "string"     => Opt.string(name, flags, default, help)
         case "byte"       => Opt.byte(  name, flags, default.map(_.toByte), help)
         case "char"       => Opt.char(  name, flags, default.map(_(0)), help)

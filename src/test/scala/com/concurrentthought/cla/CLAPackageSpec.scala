@@ -13,6 +13,8 @@ class CLAPackageSpec extends FunSpec {
     |  -l | --log | --log-level  int=3               Log level to use.
     |  -p | --path               path                Path elements separated by ':' (*nix) or ';' (Windows).
     |       --things             seq([-|])           Path elements separated by '-' or '|'.
+    |  -q | --quiet              flag                Suppress some verbose output.
+    |  -a | --anti               ~flag               An "antiflag" (defaults to true).
     |                            others              Other stuff.
     |""".stripMargin
 
@@ -23,15 +25,21 @@ class CLAPackageSpec extends FunSpec {
     Opt.path  ("path",      Vector("-p", "--path"),               None,              "Path elements separated by ':' (*nix) or ';' (Windows)."),
     Opt.seqString("""[-|]""")
               ("things",    Vector("--things"),                   None,              "Path elements separated by '-' or '|'."),
+    Flag("quiet", Vector("-q", "--quiet"), "Suppress some verbose output."),
+    Flag("anti",  Vector("-a", "--anti"), "An \"antiflag\" (defaults to true)."),
     Args.makeRemainingOpt("others", "Other stuff."))
 
   val expectedDefaults = Map[String,Any](
     Args.HELP_KEY -> false,
+    "quiet"       -> false,
+    "anti"        -> true,
     "output"      -> "/dev/null",
     "log-level"   -> 3)
 
   val expectedValuesBefore = Map[String,Any](
     Args.HELP_KEY -> false,
+    "quiet"       -> false,
+    "anti"        -> true,
     "output"      -> "/dev/null",
     "log-level"   -> 3)
 
@@ -40,6 +48,8 @@ class CLAPackageSpec extends FunSpec {
 
   val expectedValuesAfter = Map[String,Any](
     Args.HELP_KEY -> false,
+    "quiet"       -> true,
+    "anti"        -> false,
     "input"       -> "/foo/bar",
     "output"      -> "/out/baz",
     "log-level"   -> 4,
@@ -52,9 +62,8 @@ class CLAPackageSpec extends FunSpec {
   val expectedAllValuesAfter =
     expectedValuesAfter.map { case (k,v) => k -> Vector(v) }
 
-  describe ("DSL") {
+  describe ("package cla") {
     describe ("implicit class ToArgs") {
-      import dsl._
 
       it ("converts a multi line string into an Args") {
         val args = argsStr.toArgs
@@ -65,6 +74,8 @@ class CLAPackageSpec extends FunSpec {
 
       it ("constructs an Args that parses arguments like any other Args") {
         val args = argsStr.toArgs.parse(Array(
+          "--quiet",
+          "--anti",
           "--input",     "/foo/bar",
           "--output",    "/out/baz",
           "--log-level", "4",
