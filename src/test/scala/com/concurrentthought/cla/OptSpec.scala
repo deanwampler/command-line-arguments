@@ -14,18 +14,23 @@ class OptSpec extends FunSpec {
           default = Some("/data/input"),
           help    = "help message")
       }
+      ()  // Suppress -Ywarn-value-discard warning
     }
 
     it ("allows an empty help message") {
+      // No exception thrown:
       Opt.string(
         name    = "in",
         flags   = Seq("-i", "--in", "--input"))
+      ()  // Suppress -Ywarn-value-discard warning
     }
 
     it ("allows the list of flags to be empty (but see Args requirements)") {
+      // No exception thrown:
       Opt.string(
         name    = "in",
         flags   = Nil)
+      ()  // Suppress -Ywarn-value-discard warning
     }
 
     it ("allows the value to default to None") {
@@ -242,12 +247,15 @@ class OptSpec extends FunSpec {
           flags   = Seq("-h", "--h", "--help"),
           help    = "help message")
       }
+      ()  // Suppress -Ywarn-value-discard warning
     }
 
     it ("allows an empty help message") {
+      // No exception thrown:
       Flag(
         name    = Args.HELP_KEY,
         flags   = Seq("-h", "--h", "--help"))
+      ()  // Suppress -Ywarn-value-discard warning
     }
 
     it ("defaults the value to Some(false)") {

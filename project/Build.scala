@@ -23,10 +23,11 @@ object BuildSettings {
       version       := Version,
       scalaVersion  := ScalaVersion,
       description   := "A library for handling command-line arguments.",
-      scalacOptions := Seq("-deprecation", "-unchecked", "-encoding", "utf8",
-        "-Xlint", "-feature", "-Ywarn-infer-any"),
-        // This is a nice warning, but it trips up ScalaTest constructs,
-        // among others: "-Ywarn-value-discard"
+      scalacOptions := Seq("-deprecation", "-unchecked", "-feature",
+        "-encoding", "utf8",
+        "-Xfatal-warnings", "-Xlint", "-Xfuture",
+        "-Ywarn-infer-any", "-Yno-adapted-args", "-Ywarn-dead-code",
+        "-Ywarn-numeric-widen", "-Ywarn-value-discard", "-Ywarn-unused-import"),
 
       buildInfoPackage := Name,
       buildInfoKeys := Seq[BuildInfoKey](version, scalaVersion),

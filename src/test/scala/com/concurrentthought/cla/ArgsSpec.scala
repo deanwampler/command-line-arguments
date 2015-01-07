@@ -58,6 +58,7 @@ class ArgsSpec extends FunSpec {
         intercept[IllegalArgumentException] {
           Args(Seq(Opt.string("one", Nil), Opt.string("two", Nil)))
         }
+        ()  // Suppress -Ywarn-value-discard warning
       }
     }
 
