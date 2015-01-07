@@ -17,7 +17,8 @@ object Help {
   def apply(args: Args): String = {
     val lines = Vector(s"Usage: ${args.programInvocation} [options]", args.description) ++
       errorsHelp(args) ++
-      Vector("Where the supported options are the following:") ++ argsHelp(args)
+      Vector("Where the supported options are the following:") ++
+      argsHelp(args) :+ trailing(args)
     (for { s <- lines } yield s).mkString("", "\n", "\n")
   }
 
@@ -28,7 +29,7 @@ object Help {
 
   protected def argsHelp(args: Args): Vector[String] = {
     val strings = args.opts.map(o => (toFlagsHelp(o), toHelp(o)))
-    val maxFlagLen = strings.unzip._1.maxBy(_.size).size
+    val maxFlagLen  = strings.map(_._1).maxBy(_.size).size
     val fmt = s"%-${maxFlagLen}s    %s"
     strings.foldLeft(Vector.empty[String]) {
       case (vect, (flags, hlp)) =>
@@ -38,10 +39,14 @@ object Help {
     }
   }
 
-  /** Handles the special case of a no-flags option, used for other command-line tokens. */
   protected def toFlagsHelp(opt: Opt[_]): String = {
-    val s = opt.flags.mkString("  ", " | ", "")
-    if (s.trim.length == 0) "  "+opt.name else s
+    val prefix = "  "
+    val valueName = opt match {
+      case f: Flag => ""
+      case _ => prefix + opt.name
+    }
+    val s = opt.flags.mkString(prefix, " | ", "")
+    if (s == prefix) valueName else s + valueName
   }
 
   protected def toHelp(opt: Opt[_]): Vector[String] = {
@@ -55,6 +60,17 @@ object Help {
       }
     }
   }
+
+  /**
+   * Add a trailing message about the alternative syntax, but only if there are
+   * actually options that have flags and values, i.e., that aren't `Flags` and
+   * aren't the special case option for tokens without a flag.
+   * A bit of a hack...
+   */
+  protected def trailing(args: Args): String =
+    if (args.opts.exists(o => o.isInstanceOf[OptWithValue[_]] && o.flags != Nil)) {
+      "You can also use --foo=bar syntax."
+    } else ""
 
   protected def wrap(s: String): Vector[String] = {
     val sb = new StringBuilder()

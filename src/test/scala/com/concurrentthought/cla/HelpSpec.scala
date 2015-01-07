@@ -24,15 +24,16 @@ class HelpSpec extends FunSpec {
         s"""Usage: java HelpSpec [options]
         |A ScalaTest for the Help class.
         |Where the supported options are the following:
-        |  -h | --h | --help              Show this help message.
-        |  -i | --in | --input            Input files with an extremely long help message that should
-        |                                 be wrapped by Help so it doesn't run off the screen like it
-        |                                 does in this test source file!
-        |                                 (default: /data/input)
-        |  -o | --o | --out | --output    Output files.
-        |                                 (default: /dev/null)
-        |  -q | --quiet                   Suppress some verbose output.
-        |  remaining                      All remaining arguments that aren't associated with flags.
+        |  -h | --h | --help                   Show this help message.
+        |  -i | --in | --input  in             Input files with an extremely long help message that should
+        |                                      be wrapped by Help so it doesn't run off the screen like it
+        |                                      does in this test source file!
+        |                                      (default: /data/input)
+        |  -o | --o | --out | --output  out    Output files.
+        |                                      (default: /dev/null)
+        |  -q | --quiet                        Suppress some verbose output.
+        |  remaining                           All remaining arguments that aren't associated with flags.
+        |You can also use --foo=bar syntax.
         |""".stripMargin)
     }
 
@@ -43,6 +44,7 @@ class HelpSpec extends FunSpec {
         |Where the supported options are the following:
         |  -h | --h | --help    Show this help message.
         |  remaining            All remaining arguments that aren't associated with flags.
+        |
         |""".stripMargin)
     }
 
@@ -56,10 +58,11 @@ class HelpSpec extends FunSpec {
         |  UnrecognizedArgument (or missing value): --foo (rest of arguments: --int x)
         |  Invalid value string: x for option --int (cause: java.lang.NumberFormatException: For input string: "x")
         |Where the supported options are the following:
-        |  -h | --h | --help    Show this help message.
-        |  -i | --i | --int     int help message
-        |                       (default: 0)
-        |  remaining            All remaining arguments that aren't associated with flags.
+        |  -h | --h | --help        Show this help message.
+        |  -i | --i | --int  int    int help message
+        |                           (default: 0)
+        |  remaining                All remaining arguments that aren't associated with flags.
+        |You can also use --foo=bar syntax.
         |""".stripMargin)
     }
   }
