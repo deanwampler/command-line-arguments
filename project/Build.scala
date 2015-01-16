@@ -15,7 +15,7 @@ object BuildSettings {
 
   val Name = "command-line-arguments"
   val Version = "0.2.0"
-  val ScalaVersion  = "2.11.4"
+  val ScalaVersion  = "2.11.5"
 
   lazy val buildSettings =
     Defaults.coreDefaultSettings ++ buildInfoSettings ++ releaseSettings ++ Seq (
