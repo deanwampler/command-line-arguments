@@ -130,7 +130,7 @@ Before discussing the `process` method shown, let's see two alternative, program
 
  Each option is defined using a [com.concurrentthought.cla.Opt](src/main/scala/com/concurrentthought/cla/Opt.scala) value. In this case, there are helper methods in the `Opt` companion object for constructing options where the values are strings or numbers. The `string` and `int` helpers are used here for `String` and `Int` arguments, respectively).
 
-The arguments to each of these helpers (and also for `Opt[V].apply()` that they invoke) is the option name, used to retrieve the value later, a `Seq` of flags for command line invocation, an optional default value if the command-line argument isn't used, and a help string for the option.
+The arguments to each of these helpers (and also for `Opt[V].apply()` that they invoke) is the option name, used to retrieve the value later, a `Seq` of flags for command line invocation, an optional default value if the command-line argument isn't used (defaults to `None`), a help string (defaults to ""), and a boolean flag indicating whether or not the "option" is required (defaults to `false`, which is sort of the opposite behavior of the string DSL discussed previously).
 
 There are also two helpers for command-line arguments that are strings that contain sequences of elements. We use one of them here, `seqString`, for a classpath-style argument, where the elements will be split into a `Seq[String]`, using `:` and `;` as delimiters; the first argument is a regular expression for the delimiter. If you want to support a path-like option, e.g., a `CLASSPATH`, there is another, even more specific helper, `Opt.path`, that handles the platform-specific value for the path-element separator.
 
@@ -162,7 +162,7 @@ Here is a slightly more concise way to write the content in `main2`:
   ...
 ```
 
-This is more concise, but harder to follow.
+This is more concise, but perhaps harder to follow.
 
 The `process` method uses the [Args](src/main/scala/com/concurrentthought/cla/Args.scala). It first parses the user-specified arguments, returning a new `Args` instance with updated values for each argument.
 
@@ -181,9 +181,9 @@ If errors occurred or help was requested, print the appropriate messages and exi
     ...
 ```
 
-Otherwise, if `--quiet` wasn't specified, then start printing information.
+You'll almost always want to include logic like this in your code that uses this library.
 
-First, print all the options and the current values for them, either the defaults or the user-specified values.
+Otherwise, if `--quiet` wasn't specified, then start printing information. First, print all the options and the current values for them, either the defaults or the user-specified values.
 
 ```
     ...
