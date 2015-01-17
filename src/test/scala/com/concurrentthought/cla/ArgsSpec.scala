@@ -161,6 +161,22 @@ class ArgsSpec extends FunSpec {
         assert(args.failures.isEmpty)
       }
 
+      val req1 = Opt.string("req1", Seq("--r1"), requiredFlag = true)
+      val req2 = Opt.string("req2", Seq("--r2"), requiredFlag = true, default = Some("foo"))
+      val req3 = Opt.string("req3", Seq("--r3"), requiredFlag = true)
+      val requiredArgs = Args(opts = Seq(req1, req2, req3))
+        
+      it ("contains a list of the required options, which are marked required AND don't have default values") {
+        assert(requiredArgs.requiredOptions === Seq(req1, req3))
+      }
+
+      it ("returns failures for required options that weren't specified") {
+        val args2 = requiredArgs.parse(Array.empty[String])
+        assert(args2.failures === Seq(
+          ("req1", Args.MissingRequiredArgument(req1)),
+          ("req3", Args.MissingRequiredArgument(req3))))
+      }
+
       def unknowns() = {
         val args = Args.empty.parse(Array("--foo", "-b", "bbb"))
         assert(args.values    === Map(Args.HELP_KEY -> false))
@@ -496,29 +512,35 @@ class ArgsSpec extends FunSpec {
 
     describe ("socketOpt") {
       it ("defines a socket (host:port) option") {
-        assert(Args.socketOpt.default === None)
+        assert(Args.socketOpt().default === None)
+      }
+      it ("can be made required") {
+        assert(Args.socketOpt(required = true).required === true)
       }
 
       describe ("""requires a string of the form "host:port" option""") {
+        it ("can be provided a default value") {
+          assert(Args.socketOpt(default = Some(("host",123))).default === Some(("host",123)))
+        }
         it ("succeeds if the host is a name or IP address and the port is an integer") {
           val expected = (("socket", Try(("host", 123))), Nil)
-          assert(Args.socketOpt.parser(Seq("--socket", "host:123")) === expected)
+          assert(Args.socketOpt().parser(Seq("--socket", "host:123")) === expected)
         }
         it ("returns a Failure(Opt.InvalidValueString) if the :port is missing") {
-          Args.socketOpt.parser(Seq("--socket", "host"))
-          val result = Args.socketOpt.parser(Seq("--socket", "host", "--bar"))
+          Args.socketOpt().parser(Seq("--socket", "host"))
+          val result = Args.socketOpt().parser(Seq("--socket", "host", "--bar"))
           val r1 = ("socket", Failure(Opt.InvalidValueString("--socket", "host", None)))
           val r2 = Seq("--bar")
           assert((r1, r2) === result)
         }
         it ("returns a Failure(Opt.InvalidValueString) if the host: is missing") {
-          val result = Args.socketOpt.parser(Seq("--socket", "123", "--bar"))
+          val result = Args.socketOpt().parser(Seq("--socket", "123", "--bar"))
           val r1 = ("socket", Failure(Opt.InvalidValueString("--socket", "123", None)))
           val r2 = Seq("--bar")
           assert((r1, r2) === result)
         }
         it ("returns a Failure(Opt.InvalidValueString) if the port is not an integer") {
-          Args.socketOpt.parser(Seq("--socket", "host:foo", "--bar")) match {
+          Args.socketOpt().parser(Seq("--socket", "host:foo", "--bar")) match {
             case (("socket", Failure(failure)), Seq("--bar")) => failure match {
               case Opt.InvalidValueString("--socket", "host:foo (not an int?)", Some(th)) => /* pass */
               case _ => fail("Unexpected exception: "+failure)

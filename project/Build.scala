@@ -14,20 +14,29 @@ import sbtrelease.Utilities._
 object BuildSettings {
 
   val Name = "command-line-arguments"
-  val Version = "0.2.0"
+  val Version = "0.2.1"
   val ScalaVersion  = "2.11.5"
+  val CrossScalaVersions = Seq("2.10.4", "2.11.5")
 
-  lazy val buildSettings =
-    Defaults.coreDefaultSettings ++ buildInfoSettings ++ releaseSettings ++ Seq (
-      name          := Name,
-      version       := Version,
-      scalaVersion  := ScalaVersion,
-      description   := "A library for handling command-line arguments.",
-      scalacOptions := Seq("-deprecation", "-unchecked", "-feature",
+  val allScalacOptions = Vector("-deprecation", "-unchecked", "-feature",
         "-encoding", "utf8",
         "-Xfatal-warnings", "-Xlint", "-Xfuture",
-        "-Ywarn-infer-any", "-Yno-adapted-args", "-Ywarn-dead-code",
-        "-Ywarn-numeric-widen", "-Ywarn-value-discard", "-Ywarn-unused-import"),
+        "-Yno-adapted-args", "-Ywarn-dead-code",
+        "-Ywarn-numeric-widen", "-Ywarn-value-discard")
+  val scalac211Options = Vector("-Ywarn-infer-any", "-Ywarn-unused-import")
+
+ lazy val buildSettings =
+    Defaults.coreDefaultSettings ++ buildInfoSettings ++ releaseSettings ++ Seq (
+      name               := Name,
+      version            := Version,
+      scalaVersion       := ScalaVersion,
+      crossScalaVersions := CrossScalaVersions,
+      description        := "A library for handling command-line arguments.",
+
+      scalacOptions <<= scalaVersion map { v: String =>
+        if (v.startsWith("2.10.")) allScalacOptions 
+        else allScalacOptions ++ scalac211Options
+      },
 
       buildInfoPackage := Name,
       buildInfoKeys := Seq[BuildInfoKey](version, scalaVersion),
@@ -55,12 +64,10 @@ object ShellPrompt {
       getOrElse "-" stripPrefix "## "
   )
 
-  val Prompt = {
+  def prompt(version: String) = {
     (state: State) => {
       val currProject = Project.extract (state).currentProject.id
-      "%s:%s:%s> ".format (
-        currProject, currBranch, BuildSettings.Version
-      )
+      "%s:%s:%s> ".format (currProject, currBranch, version)
     }
   }
 }
@@ -90,7 +97,7 @@ object CLABuild extends Build {
     id = BuildSettings.Name,
     base = file("."),
     settings = buildSettings ++ Seq(
-      shellPrompt := ShellPrompt.Prompt,
+      shellPrompt := ShellPrompt.prompt(BuildSettings.Version),
       resolvers   := allResolvers,
       exportJars  := true,
       libraryDependencies ++= Dependencies.dependencies))

@@ -17,13 +17,13 @@ package object cla {
    *   |java -cp ... foo
    *   |Some description
    *   |and a second line.
-   *   |  -i | --in  | --input      string              Path to input file.
-   *   |  -o | --out | --output     string=/dev/null    Path to output file.
-   *   |  -l | --log | --log-level  int=3               Log level to use.
-   *   |  -p | --path               path                Path elements separated by ':' (*nix) or ';' (Windows).
-   *   |  -q | --quiet              flag                Suppress some verbose output.
-   *   |       --things             seq([-|])           String elements separated by '-' or '|'.
-   *   |                            others              Other stuff.
+   *   |  [-i | --in  | --input       string]             Path to input file.
+   *   |  [-o | --out | --output      string=/dev/null]   Path to output file.
+   *   |  [-l | --log | --log-level   int=3]              Log level to use.
+   *   |   -p | --path                path                Path elements separated by ':' (*nix) or ';' (Windows).
+   *   |  [-q | --quiet               flag]               Suppress some verbose output.
+   *   |        [--things             seq([-|])]          String elements separated by '-' or '|'.
+   *   |                              others              Other stuff.
    *   |""".stripMargin.toArgs
    * }}}
    * The format, as illustrated in the example, has the following requirements:
@@ -39,6 +39,10 @@ package object cla {
    *   in `Args.remaining`).
    *   Note that these tokens are handled whether or not you specify a line like
    *   this or not.</li>
+   * <li>If the option is not required for the user to specify a value, the flags
+   *   and name must be wrapped in "[...]". Specifying a default value is effectively
+   *   the name as not required, but the main purpose is display the expected
+   *   behavior to the user.</li>
    * <li>After the flags, the "middle column" describes the type of option and
    *   optionally a default value. The types correspond to several helper functions
    *   in `Opt`: `string`, `byte`, `char`, `int`, `long`, `float`, `double`, `path`,
@@ -74,51 +78,70 @@ package object cla {
         case (head +: tail, seq) => (head, tail.mkString(" "), seq)
       }
       val opts = optLines map { s =>
+        val (s2, required) = removeLeadingBracket(s)
         val flagRE = """\s*(--?\w\S*)\s*\|?""".r
-        val s2 = s.trim
-        val flags  = flagRE.findAllMatchIn(s2).map(_.toString).map {
+        val flags = flagRE.findAllMatchIn(s2).map(_.toString).map {
           case flagRE(flag) => flag
         }.toVector
-        val rest   = if (flags.size == 0) s2 else {
+        val rest = if (flags.size == 0) s2 else {
           val Array(_, rest) = s2.split(flags.last, 2)
           rest.trim
         }
         val Array (typ1, help) = rest.split("""\s+""",2)
+        // Also remove leading "[" and trailing "]" if any.
+        // There will only be a leading "[" for the one allowed no-flag option.
         val (typ, default) = typ1.split("""=""",2) match {
-          case Array(v,d) => (v, Some(d))
-          case Array(v) => (v, None)
+          case Array(v,d) => 
+            val (d2, _) = removeTrailingBracket(d)
+            (v, Some(d2))
+          case Array(v) =>
+            val (v2, _) = removeLeadingBracket(v)
+            (v2, None)
         }
         // Use the LAST flag name (without the leading "-") as the name.
         // For the case where there is no flag, use "remaining".
         val name = if (flags.size == 0) Args.REMAINING_KEY else flags.last.replaceAll("^--?", "")
+        val typ2 = if (typ.endsWith("]")) typ.substring(0,typ.length-1) else typ
         try {
-          fromType(typ, name, flags, default, help)
+          fromType(typ2, name, flags, default, help, required)
         } catch {
-          case InvalidType => throw InvalidTypeInArgsString(typ, str)
+          case InvalidType => throw InvalidTypeInArgsString(typ2, str)
         }
       }
       Args(programInvocation, description, opts.toVector)
     }
 
+    protected def removeLeadingBracket(s: String): (String, Boolean) = {
+      val s2 = s.trim
+      if (s2.startsWith("[")) (s2.substring(1, s2.length), false) 
+      else (s2, true)
+    }
+    protected def removeTrailingBracket(s: String): (String, Boolean) = {
+      val s2 = s.trim
+      if (s2.endsWith("]")) (s2.substring(0, s2.length - 1), false) 
+      else (s2, true)
+    }
+
     protected def fromType(typ: String,
-      name: String, flags: Seq[String], default: Option[String], help: String): Opt[_] = {
+      name: String, flags: Seq[String], default: Option[String], 
+      help: String, required: Boolean): Opt[_] = {
       val seqRE = """seq\(([^)]+)\)""".r
       typ match {
-        case "flag"       => Flag(name, flags, help)
-        case "~flag"      => Flag.reverseSense(name, flags, help)
-        case "string"     => Opt.string(name, flags, default, help)
-        case "byte"       => Opt.byte(  name, flags, default.map(_.toByte), help)
-        case "char"       => Opt.char(  name, flags, default.map(_(0)), help)
-        case "int"        => Opt.int(   name, flags, default.map(_.toInt), help)
-        case "long"       => Opt.long(  name, flags, default.map(_.toLong), help)
-        case "float"      => Opt.float( name, flags, default.map(_.toFloat), help)
-        case "double"     => Opt.double(name, flags, default.map(_.toDouble), help)
-        case seqRE(delim) => Opt.seqString(delim)(name, flags, default.map(s => Seq(s)), help)
+        case "flag"       => Flag(name, flags, help, required)
+        case "~flag"      => Flag.reverseSense(name, flags, help, required)
+        case "string"     => Opt.string(name, flags, default, help, required)
+        case "byte"       => Opt.byte(  name, flags, default.map(_.toByte), help, required)
+        case "char"       => Opt.char(  name, flags, default.map(_(0)), help, required)
+        case "int"        => Opt.int(   name, flags, default.map(_.toInt), help, required)
+        case "long"       => Opt.long(  name, flags, default.map(_.toLong), help, required)
+        case "float"      => Opt.float( name, flags, default.map(_.toFloat), help, required)
+        case "double"     => Opt.double(name, flags, default.map(_.toDouble), help, required)
+        case seqRE(delim) => Opt.seqString(delim)(name, flags, default.map(s => Seq(s)), help, required)
         case "seq"        =>
           println("com.concurrentthought.cla.dsl: WARNING, bare 'seq' (vs. 'seq(delim)') found. Using Opt.path.")
-          Opt.path(name, flags, default.map(s => Seq(s)), help)
-        case "path"       => Opt.path(name, flags, default.map(s => Seq(s)), help)
-        case name if (flags.size == 0) => Args.makeRemainingOpt(name, help)
+          Opt.path(name, flags, default.map(s => Seq(s)), help, required)
+        case "path"       => Opt.path(name, flags, default.map(s => Seq(s)), help, required)
+        case name if (flags.size == 0) => Args.makeRemainingOpt(name, help, required)
         case _ => throw new InvalidTypeInArgsString(typ, "")
       }
     }

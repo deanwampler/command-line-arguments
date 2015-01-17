@@ -25,6 +25,30 @@ class OptSpec extends FunSpec {
       ()  // Suppress -Ywarn-value-discard warning
     }
 
+    it ("can be required") {
+      val opt = Opt.string(
+        name     = "in",
+        flags    = Seq("-i", "--in", "--input"),
+        requiredFlag = true)
+      assert(opt.required === true)
+    }
+
+    it ("defaults to not required") {
+      val opt = Opt.string(
+        name     = "in",
+        flags    = Seq("-i", "--in", "--input"))
+      assert(opt.required === false)
+    }
+
+    it ("ignores the required flag if the default is not None") {
+      val opt = Opt.string(
+        name     = "in",
+        flags    = Seq("-i", "--in", "--input"),
+        default  = Some("foo"),
+        requiredFlag = true)
+      assert(opt.required === false)
+    }
+
     it ("allows the list of flags to be empty (but see Args requirements)") {
       // No exception thrown:
       Opt.string(

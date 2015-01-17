@@ -11,7 +11,8 @@ package com.concurrentthought.cla
  * run --in /in --out=/out -l=4 --path "a:b" --things=x-y|z -q foo bar baz
  * }}}
  * The last example demonstrates that both `flag value` and `flag=value` syntax
- * is supported.
+ * is supported. The "[...]" indicate optional arguments, so in this example, 
+ * you must specify the `input` argument and at least one token for "others".
  */
 object CLASampleMain {
 
@@ -19,13 +20,13 @@ object CLASampleMain {
     val args: Args = """
       |run-main CLASampleMain [options]
       |Demonstrates the CLA API.
-      |  -i | --in  | --input      string              Path to input file.
-      |  -o | --out | --output     string=/dev/null    Path to output file.
-      |  -l | --log | --log-level  int=3               Log level to use.
-      |  -p | --path               path                Path elements separated by ':' (*nix) or ';' (Windows).
-      |       --things             seq([-|])           String elements separated by '-' or '|'.
-      |  -q | --quiet              flag                Suppress some verbose output.
-      |                            others              Other arguments.
+      |   -i | --in  | --input      string              Path to input file.
+      |  [-o | --out | --output     string=/dev/null]   Path to output file.
+      |  [-l | --log | --log-level  int=3]              Log level to use.
+      |  [-p | --path               path]               Path elements separated by ':' (*nix) or ';' (Windows).
+      |        [--things            seq([-|])]          String elements separated by '-' or '|'.
+      |  [-q | --quiet              flag]               Suppress some verbose output.
+      |                             others              Other arguments.
       |""".stripMargin.toArgs
 
     process(args, argstrings)
@@ -36,7 +37,8 @@ object CLASampleMain {
     val input  = Opt.string(
       name     = "input",
       flags    = Seq("-i", "--in", "--input"),
-      help     = "Path to input file.")
+      help     = "Path to input file.",
+      requiredFlag = true)
     val output = Opt.string(
       name     = "output",
       flags    = Seq("-o", "--out", "--output"),
@@ -47,16 +49,20 @@ object CLASampleMain {
       flags    = Seq("-l", "--log", "--log-level"),
       default  = Some(3),
       help     = "Log level to use.")
-    val path = Opt.seqString(delimsRE = "[:;]")(
+    val path = Opt.path(
       name     = "path",
-      flags    = Seq("-p", "--path"),
-      help     = "Path elements separated by ':' (*nix) or ';' (Windows).")
+      flags    = Seq("-p", "--path"))
+    val things = Opt.seqString(delimsRE = "[-|]")(
+      name     = "things",
+      flags    = Seq("--things"),
+      help     = "String elements separated by '-' or '|'.")
     val others = Args.makeRemainingOpt(
       name     = "others",
-      help     = "Other arguments")
+      help     = "Other arguments",
+      requiredFlag = true)
 
     val args = Args("run-main CLASampleMain [options]", "Demonstrates the CLA API.",
-      Seq(input, output, logLevel, path, Args.quietFlag, others)).parse(argstrings)
+      Seq(input, output, logLevel, path, things, Args.quietFlag, others)).parse(argstrings)
 
     process(args, argstrings)
   }
@@ -70,14 +76,15 @@ object CLASampleMain {
     import Args._
     val args = Args("run-main CLASampleMain [options]", "Demonstrates the CLA API.",
       Seq(
-        string("input",     Seq("-i", "--in", "--input"),      None,              "Path to input file."),
+        string("input",     Seq("-i", "--in", "--input"),      None,              "Path to input file.", true),
         string("output",    Seq("-o", "--out", "--output"),    Some("/dev/null"), "Path to output file."),
         int(   "log-level", Seq("-l", "--log", "--log-level"), Some(3),           "Log level to use."),
+        path(  "path",      Seq("-p", "--path"),               None),
         seqString("[:;]")(
-               "path",      Seq("-p", "--path"),               None,              "Path elements separated by ':' (*nix) or ';' (Windows)."),
+               "things",    Seq("--things"),                   None,              "String elements separated by '-' or '|'."),
         Args.quietFlag,
         makeRemainingOpt(
-               "others",                                                          "Other arguments")))
+               "others",                                                          "Other arguments", true)))
 
     process(args, argstrings)
   }

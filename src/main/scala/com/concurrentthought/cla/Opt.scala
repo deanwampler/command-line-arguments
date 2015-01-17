@@ -9,15 +9,22 @@ import scala.util.{Try, Success, Failure}
  * <li>`flags` - the arguments that invoke the option, e.g., `-h` and `--help`.</li>
  * <li>`help` - a message displayed for command-line help.</li>
  * <li>`default` - an optional default value, for when the user doesn't specify the option.</li>
+ * <li>`required` - the user must specify this option on the command line. 
+ *     This flag is effectively ignored if a `default` is provided.</li>
  * <li>`parser` - An implementation feature for parsing arguments.</li>
  * </ol>
  */
 sealed trait Opt[V] {
-  val name:       String
-  val flags:      Seq[String]
-  val help:       String
-  val default:    Option[V]
-  val parser:     Opt.Parser[V]
+  def name:       String
+  def flags:      Seq[String]
+  def help:       String
+  def default:    Option[V]
+  def parser:     Opt.Parser[V]
+
+  protected def requiredFlag:   Boolean
+
+  /** Is the required flag true _and_ the default is None? */
+  def required: Boolean = requiredFlag && default == None
 
   require (name.length != 0, "The Opt name can't be empty.")
 }
@@ -62,69 +69,77 @@ object Opt {
    * take a value, see `Flag`.
    */
   def apply[V](
-    name:       String,
-    flags:      Seq[String],
-    default:    Option[V] = None,
-    help:       String = "")(fromString: String => Try[V]) =
-      OptWithValue[V](name, flags, default, help)(fromString)
+    name:         String,
+    flags:        Seq[String],
+    default:      Option[V] = None,
+    help:         String = "",
+    requiredFlag: Boolean = false)(fromString: String => Try[V]) =
+      OptWithValue[V](name, flags, default, help, requiredFlag)(fromString)
 
   // Helper methods to create options.
 
   /** Create a String option */
   def string(
-    name:    String,
-    flags:   Seq[String],
-    default: Option[String] = None,
-    help:    String = "") =
-      apply(name, flags, default, help)(toTry(identity))
+    name:         String,
+    flags:        Seq[String],
+    default:      Option[String] = None,
+    help:         String = "",
+    requiredFlag: Boolean = false) =
+      apply(name, flags, default, help, requiredFlag)(toTry(identity))
 
   /** Create a Byte option. */
   def byte(
-    name:    String,
-    flags:   Seq[String],
-    default: Option[Byte] = None,
-    help:    String = "") =
-      apply(name, flags, default, help)(toTry(_.toByte))
+    name:         String,
+    flags:        Seq[String],
+    default:      Option[Byte] = None,
+    help:         String = "",
+    requiredFlag: Boolean = false) =
+      apply(name, flags, default, help, requiredFlag)(toTry(_.toByte))
 
   /** Create a Char option. Just takes the first character in the value string. */
   def char(
-    name:    String,
-    flags:   Seq[String],
-    default: Option[Char] = None,
-    help:    String = "") =
-      apply(name, flags, default, help)(toTry(_(0)))
+    name:         String,
+    flags:        Seq[String],
+    default:      Option[Char] = None,
+    help:         String = "",
+    requiredFlag: Boolean = false) =
+      apply(name, flags, default, help, requiredFlag)(toTry(_(0)))
 
   /** Create an Int option. */
   def int(
-    name:    String,
-    flags:   Seq[String],
-    default: Option[Int] = None,
-    help:    String = "") =
-      apply(name, flags, default, help)(toTry(_.toInt))
+    name:         String,
+    flags:        Seq[String],
+    default:      Option[Int] = None,
+    help:         String = "",
+    requiredFlag: Boolean = false) =
+      apply(name, flags, default, help, requiredFlag)(toTry(_.toInt))
 
   /** Create a Long option. */
   def long(
-    name:    String,
-    flags:   Seq[String],
-    default: Option[Long] = None,
-    help:    String = "") =
-      apply(name, flags, default, help)(toTry(_.toLong))
+    name:         String,
+    flags:        Seq[String],
+    default:      Option[Long] = None,
+    help:         String = "",
+    requiredFlag: Boolean = false) =
+      apply(name, flags, default, help, requiredFlag)(toTry(_.toLong))
 
   /** Create a Float option. */
   def float(
-    name:    String,
-    flags:   Seq[String],
-    default: Option[Float] = None,
-    help:    String = "") =
-      apply(name, flags, default, help)(toTry(_.toFloat))
+    name:         String,
+    flags:        Seq[String],
+    default:      Option[Float] = None,
+    help:         String = "",
+    requiredFlag: Boolean = false) =
+      apply(name, flags, default, help, requiredFlag)(toTry(_.toFloat))
 
   /** Create a Double option. */
   def double(
-    name:    String,
-    flags:   Seq[String],
-    default: Option[Double] = None,
-    help:    String = "") =
-      apply(name, flags, default, help)(toTry(_.toDouble))
+    name:         String,
+    flags:        Seq[String],
+    default:      Option[Double] = None,
+    help:         String = "",
+    requiredFlag: Boolean = false) =
+      apply(name, flags, default, help, requiredFlag)(toTry(_.toDouble))
 
   /**
    * Create an option where the value string represents a sequence with a delimiter.
@@ -137,12 +152,13 @@ object Opt {
    * methods.
    */
   def seq[V](delimsRE:  String)(
-    name:    String,
-    flags:   Seq[String],
-    default: Option[Seq[V]] = None,
-    help:    String = "")(fromString: String => Try[V]) = {
+    name:         String,
+    flags:        Seq[String],
+    default:      Option[Seq[V]] = None,
+    help:         String = "",
+    requiredFlag: Boolean = false)(fromString: String => Try[V]) = {
       require (delimsRE.trim.length > 0, "The delimiters RE string can't be empty.")
-      apply(name, flags, default, help) {
+      apply(name, flags, default, help, requiredFlag) {
         s => seqSupport(name, s, delimsRE, fromString)
       }
     }
@@ -151,23 +167,25 @@ object Opt {
    * A helper method when the substrings are returned without further processing required.
    */
   def seqString(delimsRE:  String)(
-    name:    String,
-    flags:   Seq[String],
-    default: Option[Seq[String]] = None,
-    help:    String = "") =
-      seq[String](delimsRE)(name, flags, default, help)(toTry(_.toString))
+    name:         String,
+    flags:        Seq[String],
+    default:      Option[Seq[String]] = None,
+    help:         String = "",
+    requiredFlag: Boolean = false) =
+      seq[String](delimsRE)(name, flags, default, help, requiredFlag)(toTry(_.toString))
 
   /**
    * A helper method for path-like structures, where the default delimiter
    * for the platform is used, e.g., ':' for *nix systems and ';' for Windows.
    */
   def path(
-    name:    String,
-    flags:   Seq[String],
-    default: Option[Seq[String]] = None,
-    help:    String = "List of file system paths") =
+    name:         String,
+    flags:        Seq[String],
+    default:      Option[Seq[String]] = None,
+    help:         String = "List of file system paths",
+    requiredFlag: Boolean = false) =
       seqString(sys.props.getOrElse("path.separator",":"))(
-        name, flags, default, help)
+        name, flags, default, help, requiredFlag)
 
   private def seqSupport[V](name: String, str: String, delimsRE: String,
     fromString: String => Try[V]): Try[Seq[V]] = {
@@ -191,10 +209,11 @@ object Opt {
  * </ol>
  */
 case class OptWithValue[V] (
-  name:    String,
-  flags:   Seq[String],
-  default: Option[V] = None,
-  help:    String = "")(fromString: String => Try[V]) extends Opt[V] {
+  name:         String,
+  flags:        Seq[String],
+  default:      Option[V] = None,
+  help:         String = "",
+  requiredFlag: Boolean = false)(fromString: String => Try[V]) extends Opt[V] {
 
   protected val opteqRE = "^([^=]+)=(.*)$".r
 
@@ -220,14 +239,19 @@ case class OptWithValue[V] (
  * with the sense "flipped" using `Flag.reverseSense()`.
  */
 case class Flag (
-  name:    String,
-  flags:   Seq[String],
-  help:    String = "") extends Opt[Boolean] {
+  name:         String,
+  flags:        Seq[String],
+  help:         String = "",
+  requiredFlag: Boolean = false) extends Opt[Boolean] {
 
     val default = Some(false)
 
+    // In Scala 2.11, we would simply put default.get in the definition of parser,
+    // but in 2.10, we trip over a parse ambiguity of some kind...
+    private lazy val d = default.get
+
     val parser: Opt.Parser[Boolean] = {
-      case flag +: tail if flags.contains(flag) => ((name, Try(!default.get)), tail)
+      case flag +: tail if flags.contains(flag) => ((name, Success(!d)), tail)
     }
 }
 
@@ -238,9 +262,10 @@ object Flag {
    * user supplies the flag, the value is `false`.
    */
   def reverseSense(
-  name:    String,
-  flags:   Seq[String],
-  help:    String = "") = new Flag(name, flags, help) {
+  name:         String,
+  flags:        Seq[String],
+  help:         String = "",
+  requiredFlag: Boolean = false) = new Flag(name, flags, help, requiredFlag) {
     override val default = Some(true)
   }
 }

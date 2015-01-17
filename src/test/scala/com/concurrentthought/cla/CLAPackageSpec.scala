@@ -8,23 +8,23 @@ class CLAPackageSpec extends FunSpec {
     |java -cp ... foo
     |Some description
     |and a second line.
-    |  -i | --in  | --input      string              Path to input file.
-    |  -o | --out | --output     string=/dev/null    Path to output file.
-    |  -l | --log | --log-level  int=3               Log level to use.
-    |  -p | --path               path                Path elements separated by ':' (*nix) or ';' (Windows).
-    |       --things             seq([-|])           Path elements separated by '-' or '|'.
-    |  -q | --quiet              flag                Suppress some verbose output.
-    |  -a | --anti               ~flag               An "antiflag" (defaults to true).
-    |                            others              Other stuff.
+    |   -i | --in  | --input       string              Path to input file.
+    |  [-o | --out | --output      string=/dev/null]   Path to output file.
+    |  [-l | --log | --log-level   int=3]              Log level to use.
+    |  [-p | --path                path]               Path elements separated by ':' (*nix) or ';' (Windows).
+    |        --things              seq([-|])           Path elements separated by '-' or '|'.
+    |  [-q | --quiet               flag]               Suppress some verbose output.
+    |  [-a | --anti                ~flag]              An "antiflag" (defaults to true).
+    |                              [others]            Other stuff.
     |""".stripMargin
 
   val expectedOpts = Vector(Args.helpFlag,
-    Opt.string("input",     Vector("-i", "--in" , "--input"),     None,              "Path to input file."),
+    Opt.string("input",     Vector("-i", "--in" , "--input"),     None,              "Path to input file.", true),
     Opt.string("output",    Vector("-o", "--out", "--output"),    Some("/dev/null"), "Path to output file."),
     Opt.int   ("log-level", Vector("-l", "--log", "--log-level"), Some(3),           "Log level to use."),
     Opt.path  ("path",      Vector("-p", "--path"),               None,              "Path elements separated by ':' (*nix) or ';' (Windows)."),
     Opt.seqString("""[-|]""")
-              ("things",    Vector("--things"),                   None,              "Path elements separated by '-' or '|'."),
+              ("things",    Vector("--things"),                   None,              "Path elements separated by '-' or '|'.", true),
     Flag("quiet", Vector("-q", "--quiet"), "Suppress some verbose output."),
     Flag("anti",  Vector("-a", "--anti"), "An \"antiflag\" (defaults to true)."),
     Args.makeRemainingOpt("others", "Other stuff."))

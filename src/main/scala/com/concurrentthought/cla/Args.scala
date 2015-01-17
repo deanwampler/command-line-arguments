@@ -14,20 +14,23 @@ import java.io.PrintStream
  */
 case class Args protected (
   programInvocation: String,
-  description: String,
-  opts: Seq[Opt[_]],
-  defaults: Map[String,Any],
-  values: Map[String,Any],
-  allValues: Map[String,Seq[Any]],
-  remaining: Seq[String],
-  failures: Seq[(String,Any)]) {
+  description:       String,
+  opts:              Seq[Opt[_]],
+  defaults:          Map[String,Any],
+  values:            Map[String,Any],
+  allValues:         Map[String,Seq[Any]],
+  remaining:         Seq[String],
+  failures:          Seq[(String,Any)]) {
 
   def help: String = Help(this)
 
+  val requiredOptions = opts.filter(o => o.required)
+
   // We want the unknownOptionMatch to be just before the "remaining" option.
-  val remainingOpt = opts.find(_.flags.size == 0).get
-  val remainingOptName = remainingOpt.name
-  val opts2: Seq[Opt[_]] = opts.filter(_.name != remainingOptName)
+  protected val remainingOpt = opts.find(_.flags.size == 0).get
+  protected val remainingOptName = remainingOpt.name
+  protected val opts2: Seq[Opt[_]] = opts.filter(_.name != remainingOptName)
+  
   lazy val parserChain: Opt.Parser[_] =
     opts2.map(_.parser) reduceLeft (_ orElse _) orElse unknownOptionMatch orElse remainingOpt.parser
 
@@ -71,7 +74,22 @@ case class Args protected (
     val newValues = values ++ successes.toMap - remainingOptName
     // The remaining defaults are replaced by the new tokens:
     val newRemaining = successes.filter(_._1 == remainingOptName).map(_._2.toString).toVector
-    copy(values = newValues, allValues = newAllValues, remaining = newRemaining, failures = failures)
+
+    val failures2 = resolveFailures(successes.map(_._1), failures)
+    copy(values = newValues, allValues = newAllValues, remaining = newRemaining, failures = failures2)
+  }
+
+  /** Ignore all parse errors if help was requested */
+  protected def resolveFailures(keys: Seq[String], failures: Seq[(String,Any)]): Seq[(String,Any)] = {
+    if (keys.contains(Args.HELP_KEY)) Nil
+    else {
+      val missing = requiredOptions.filter(o => !keys.contains(o.name))
+      if (missing.size == 0) failures
+      else {
+        val missingOpts = requiredOptions.filter(o => missing.contains(o))
+        failures ++ missingOpts.map(o => (o.name, Args.MissingRequiredArgument(o)))
+      }
+    }
   }
 
   import scala.reflect.ClassTag
@@ -294,8 +312,9 @@ object Args {
    */
   def makeRemainingOpt(
     name: String = REMAINING_KEY,
-    help: String = "All remaining arguments that aren't associated with flags.") =
-      new OptWithValue[String](name = name, flags = Nil, help = help)(s => Try(s)) {
+    help: String = "All remaining arguments that aren't associated with flags.",
+    requiredFlag: Boolean = false) =
+      new OptWithValue[String](name = name, flags = Nil, help = help, requiredFlag = requiredFlag)(s => Try(s)) {
 
         /** Now there are no flags expected as the first token. */
         override val parser: Opt.Parser[String] = {
@@ -306,10 +325,13 @@ object Args {
   val remainingOpt = makeRemainingOpt()
 
   /** Socket host and port. */
-  val socketOpt = Opt[(String,Int)](
+  def socketOpt(default: Option[(String, Int)] = None, 
+      required: Boolean = false) = Opt[(String,Int)](
     name    = "socket",
     flags   = Seq("-s", "--socket"),
-    help    = "Socket host:port.") { s =>
+    default = default,
+    help    = "Socket host:port.",
+    requiredFlag = required) { s =>
       val array = s.split(":")
       if (array.length != 2) Failure(Opt.InvalidValueString("--socket", s))
       else {
@@ -321,10 +343,21 @@ object Args {
       }
     }
 
+  case class MissingRequiredArgument[T](o: Opt[T])
+    extends RuntimeException("") {
+
+    override def toString = 
+      s"""Missing required argument: "${o.name}"${flagsString} ${o.help}"""
+
+    protected def flagsString = 
+      if (o.flags.size == 0) ""
+      else s""" with flags ${o.flags.mkString(" | ")},"""
+  }
+
   case class UnrecognizedArgument(arg: String, rest: Seq[String])
     extends RuntimeException("") {
       override def toString =
-        s"UnrecognizedArgument (or missing value): $arg ${restOfArgs(rest)}"
+        s"Unrecognized argument (or missing value): $arg ${restOfArgs(rest)}"
 
       private def restOfArgs(rest: Seq[String]) =
         if (rest.size == 0) "(end of arguments)" else s"""(rest of arguments: ${rest.mkString(" ")})"""

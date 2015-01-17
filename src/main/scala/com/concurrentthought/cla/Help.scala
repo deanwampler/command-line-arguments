@@ -43,10 +43,13 @@ object Help {
     val prefix = "  "
     val valueName = opt match {
       case f: Flag => ""
-      case _ => prefix + opt.name
+      case _ => opt.name
     }
-    val s = opt.flags.mkString(prefix, " | ", "")
-    if (s == prefix) valueName else s + valueName
+    val s = opt.flags.mkString(" | ")
+    val (pre, suf) = if (!opt.required) ("[", "]") else (" ", " ")
+    if (s.trim.length == 0) prefix+pre+valueName+suf 
+    else if (valueName.length > 0) prefix+pre+s+prefix+valueName+suf
+    else prefix+pre+s+suf
   }
 
   protected def toHelp(opt: Opt[_]): Vector[String] = {
@@ -69,18 +72,16 @@ object Help {
    */
   protected def trailing(args: Args): String =
     if (args.opts.exists(o => o.isInstanceOf[OptWithValue[_]] && o.flags != Nil)) {
-      "You can also use --foo=bar syntax."
+      "You can also use --foo=bar syntax. Arguments shown in [...] are option. All others are required."
     } else ""
 
   protected def wrap(s: String): Vector[String] = {
-    val sb = new StringBuilder()
-    val ws = """\s""".r
     s.foldLeft((Vector.empty[String], 0, "")) {
       // Hit whitespace? If so, are we within 4 pos. of the max?
-      case ((vect, pos, string), ws()) if pos > (Help.maxHelpWidth - 4) =>
+      case ((vect, pos, string), c) if pos > (Help.maxHelpWidth - 4) && c.isWhitespace =>
         (vect :+ string, 0, "")  // start new string!
       // Are we starting a new string, but parsing whitespace? Skip it.
-      case ((vect, pos, ""), ws()) => (vect, pos, "")
+      case ((vect, pos, ""), c) if c.isWhitespace => (vect, pos, "")
       // Normal character or well within the max width.
       case ((vect, pos, string), c) => (vect, pos + 1, string :+ c)
     } match {

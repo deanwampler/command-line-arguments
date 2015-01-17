@@ -7,7 +7,7 @@ This is a [Scala](http://scala-lang.org) library for handling command-line argum
 
 ## Usage
 
-This library is built for Scala 2.11.5. Artifacts are published to [Sonatype's OSS service](https://oss.sonatype.org/index.html#nexus-search;quick%7Eshapeless). You'll need the following settings.
+This library is built for Scala 2.10.4, 2.11.5 (the default). Artifacts are published to [Sonatype's OSS service](https://oss.sonatype.org/index.html#nexus-search;quick%7Eshapeless). You'll need the following settings.
 
 ```
 resolvers ++= Seq(
@@ -16,7 +16,7 @@ resolvers ++= Seq(
 )
 ...
 
-scalaVersion := "2.11.5"
+scalaVersion := "2.11.5"  // or 2.10.4
 
 libraryDependencies ++= Seq(
   "com.concurrentthought.cla" %% "command-line-arguments" % "0.2.0"
@@ -38,13 +38,13 @@ object CLASampleMain {
     val args: Args = """
       |run-main CLASampleMain [options]
       |Demonstrates the CLA API.
-      |  -i | --in  | --input      string              Path to input file.
-      |  -o | --out | --output     string=/dev/null    Path to output file.
-      |  -l | --log | --log-level  int=3               Log level to use.
-      |  -p | --path               path                Path elements separated by ':' (*nix) or ';' (Windows).
-      |       --things             seq([-|])           String elements separated by '-' or '|'.
-      |  -q | --quiet              flag                Suppress some verbose output.
-      |                            others              Other arguments.
+      |   -i | --in  | --input      string              Path to input file.
+      |  [-o | --out | --output     string=/dev/null]   Path to output file.
+      |  [-l | --log | --log-level  int=3]              Log level to use.
+      |  [-p | --path               path]               Path elements separated by ':' (*nix) or ';' (Windows).
+      |        [--things            seq([-|])]          String elements separated by '-' or '|'.
+      |  [-q | --quiet              flag]               Suppress some verbose output.
+      |                             others              Other arguments.
       |""".stripMargin.toArgs
 
     process(args, argstrings)
@@ -57,6 +57,10 @@ The [Scaladocs comments](src/main/scala/com/concurrentthought/cla/package.scala)
 The first lines of the string that *don't* have leading whitespace are interpreted as lines to show as part of the corresponding help message, including an example of how to invoke the program and zero or more additional descriptions.
 
 Next come the command-line options, one per line. Each must start with whitespace, followed by zero or more flags separated by `|`. There can be at most one option that has no flags. It is used to provide a help message for how command-line tokens that aren't associated with flags will be interpreted. (Note that the library will still handle these tokens whether or not you specify a line like this.)
+
+To indicate that an option can be omitted by the user (i.e., it's truly _optional_), the flags and name must be wrapped in `[...]`. Otherwise, the user must specify the option explicitly on the command line. However, if a default value is specified (discussed next), it makes an option _optional_ anyway. The purpose of the optional feature is to indicate to the user which arguments are required and to automatically report missing arguments as errors.
+
+In this example, all are optional except for the `--input` and `others` arguments.
 
 The center "column" specifies the type of the option and an optional default value, which is indicated with an equals `=` sign. The following "types" are supported:
 
@@ -91,7 +95,8 @@ Before discussing the `process` method shown, let's see two alternative, program
     val input  = Opt.string(
       name     = "input",
       flags    = Seq("-i", "--in", "--input"),
-      help     = "Path to input file.")
+      help     = "Path to input file.",
+      requiredFlag = true)
     val output = Opt.string(
       name     = "output",
       flags    = Seq("-o", "--out", "--output"),
@@ -102,16 +107,20 @@ Before discussing the `process` method shown, let's see two alternative, program
       flags    = Seq("-l", "--log", "--log-level"),
       default  = Some(3),
       help     = "Log level to use.")
-    val path = Opt.seqString(delimsRE = "[:;]")(
+    val path = Opt.path(
       name     = "path",
-      flags    = Seq("-p", "--path"),
-      help     = "Path elements separated by ':' (*nix) or ';' (Windows).")
+      flags    = Seq("-p", "--path"))
+    val things = Opt.seqString(delimsRE = "[-|]")(
+      name     = "things",
+      flags    = Seq("--things"),
+      help     = "String elements separated by '-' or '|'.")
     val others = Args.makeRemainingOpt(
       name     = "others",
-      help     = "Other arguments")
+      help     = "Other arguments",
+      requiredFlag = true)
 
     val args = Args("run-main CLASampleMain [options]", "Demonstrates the CLA API.",
-      Seq(input, output, logLevel, path, Args.quietFlag, others)).parse(argstrings)
+      Seq(input, output, logLevel, path, things, Args.quietFlag, others)).parse(argstrings)
 
     process(args, argstrings)
   }
@@ -141,11 +150,12 @@ Here is a slightly more concise way to write the content in `main2`:
         string("input",     Seq("-i", "--in", "--input"),      None,              "Path to input file."),
         string("output",    Seq("-o", "--out", "--output"),    Some("/dev/null"), "Path to output file."),
         int(   "log-level", Seq("-l", "--log", "--log-level"), Some(3),           "Log level to use."),
+        path(  "path",      Seq("-p", "--path"),               None),
         seqString("[:;]")(
-               "path",      Seq("-p", "--path"),               None,              "Path elements separated by ':' (*nix) or ';' (Windows)."),
+               "things",    Seq("--things"),                   None,              "String elements separated by '-' or '|'."),
         Args.quietFlag,
         makeRemainingOpt(
-               "others",                                                          "Other arguments")))
+               "others",                                                          "Other arguments", true)))
 
     process(args, argstrings)
   }
