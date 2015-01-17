@@ -19,7 +19,7 @@ resolvers ++= Seq(
 scalaVersion := "2.11.5"  // or 2.10.4
 
 libraryDependencies ++= Seq(
-  "com.concurrentthought.cla" %% "command-line-arguments" % "0.2.0"
+  "com.concurrentthought.cla" %% "command-line-arguments" % "0.2.1"
 )
 ```
 
