@@ -42,7 +42,7 @@ object CLASampleMain {
       |  [-o | --out | --output     string=/dev/null]   Path to output file.
       |  [-l | --log | --log-level  int=3]              Log level to use.
       |  [-p | --path               path]               Path elements separated by ':' (*nix) or ';' (Windows).
-      |        [--things            seq([-|])]          String elements separated by '-' or '|'.
+      |  [--things                  seq([-|])]          String elements separated by '-' or '|'.
       |  [-q | --quiet              flag]               Suppress some verbose output.
       |                             others              Other arguments.
       |""".stripMargin.toArgs
