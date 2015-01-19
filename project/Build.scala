@@ -14,16 +14,18 @@ import sbtrelease.Utilities._
 object BuildSettings {
 
   val Name = "command-line-arguments"
-  val Version = "0.2.1"
+  val Version = "0.3.0"
   val ScalaVersion  = "2.11.5"
   val CrossScalaVersions = Seq("2.10.4", "2.11.5")
 
-  val allScalacOptions = Vector("-deprecation", "-unchecked", "-feature",
-        "-encoding", "utf8",
-        "-Xfatal-warnings", "-Xlint", "-Xfuture",
-        "-Yno-adapted-args", "-Ywarn-dead-code",
-        "-Ywarn-numeric-widen", "-Ywarn-value-discard")
-  val scalac211Options = Vector("-Ywarn-infer-any", "-Ywarn-unused-import")
+  val minScalacOptions = Vector("-deprecation", "-unchecked", "-feature",
+    "-encoding", "utf8")
+  val commonScalacOptions = minScalacOptions ++ Vector(
+    "-Xfatal-warnings", "-Xlint",
+    "-Yno-adapted-args", "-Ywarn-dead-code",
+    "-Ywarn-numeric-widen", "-Ywarn-value-discard")
+  val scalac210Options = commonScalacOptions
+  val scalac211Options = commonScalacOptions ++ Vector("-Ywarn-infer-any", "-Ywarn-unused-import")
 
  lazy val buildSettings =
     Defaults.coreDefaultSettings ++ buildInfoSettings ++ releaseSettings ++ Seq (
@@ -33,11 +35,12 @@ object BuildSettings {
       crossScalaVersions := CrossScalaVersions,
       description        := "A library for handling command-line arguments.",
 
-      scalacOptions <<= scalaVersion map { v: String =>
-        if (v.startsWith("2.10.")) allScalacOptions 
-        else allScalacOptions ++ scalac211Options
+      scalacOptions in Compile <<= scalaVersion map { v: String =>
+        if (v.startsWith("2.10.")) scalac210Options
+        else scalac211Options
       },
-
+      scalacOptions in (Compile, console) := minScalacOptions,
+      fork in console  := true,
       buildInfoPackage := Name,
       buildInfoKeys := Seq[BuildInfoKey](version, scalaVersion),
       buildInfoKeys ++= Seq[BuildInfoKey](
@@ -73,34 +76,23 @@ object ShellPrompt {
 }
 
 
-object Resolvers {
-  val typesafe = "Typesafe Repository" at "http://repo.typesafe.com/typesafe/releases/"
-  val sonatype = "Sonatype Release" at "https://oss.sonatype.org/content/repositories/releases"
-  val mvnrepository = "MVN Repo" at "http://mvnrepository.com/artifact"
-
-  val allResolvers = Seq(typesafe, sonatype, mvnrepository)
-}
-
-object Dependencies {
-
-  val scalaTest = "org.scalatest" %% "scalatest" % "2.2.1" % "test"
-
-  val dependencies = Seq(scalaTest)
-}
-
 object CLABuild extends Build {
   import Resolvers._
-  import Dependencies._
   import BuildSettings._
+
+  val parboiled  = "org.parboiled"  %% "parboiled-scala" % "1.1.6"
+  val scalaTest  = "org.scalatest"  %% "scalatest"       % "2.2.1"  % "test"
+  val scalaCheck = "org.scalacheck" %% "scalacheck"      % "1.12.1" % "test"
+
+  val dependencies = Seq(parboiled, scalaTest, scalaCheck)
 
   lazy val claProject = Project(
     id = BuildSettings.Name,
     base = file("."),
     settings = buildSettings ++ Seq(
       shellPrompt := ShellPrompt.prompt(BuildSettings.Version),
-      resolvers   := allResolvers,
       exportJars  := true,
-      libraryDependencies ++= Dependencies.dependencies))
+      libraryDependencies ++= dependencies))
 }
 
 
