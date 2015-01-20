@@ -15,8 +15,8 @@ object BuildSettings {
 
   val Name = "command-line-arguments"
   val Version = "0.3.0"
-  val ScalaVersion  = "2.11.5"
-  val CrossScalaVersions = Seq("2.10.4", "2.11.5")
+  val ScalaVersion  = "2.11.4"
+  val CrossScalaVersions = Seq("2.10.4", "2.11.4")
 
   val minScalacOptions = Vector("-deprecation", "-unchecked", "-feature",
     "-encoding", "utf8")
