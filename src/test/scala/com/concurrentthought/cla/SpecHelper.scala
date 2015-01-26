@@ -75,4 +75,65 @@ object SpecHelper {
   val allOpts = allOpts1 :+ othersOpt
   val allDefaults = allOpts1.map(o => (o.name, o.default.get)).toMap + (Args.HELP_KEY -> false)
   val allRemaining = Vector.empty[String]
+
+
+  val argsStr = """
+    |java -cp ... foo
+    |Some description
+    |and a second line.
+    |   -i | --in  | --input       string              Path to input file.
+    |  [-o | --out | --output      string=/dev/null]   Path to output file.
+    |  [-l | --log | --log-level   int=3]              Log level to use.
+    |  [-p | --path                path]               Path elements separated by ':' (*nix) or ';' (Windows).
+    |        --things              seq([-|])           Path elements separated by '-' or '|'.
+    |  [-q | --quiet               flag]               Suppress some verbose output.
+    |  [-a | --anti                ~flag]              An "antiflag" (defaults to true).
+    |                              [others]            Other stuff.
+    |""".stripMargin
+
+  val expectedOpts = Vector(Args.helpFlag,
+    Opt.string("input",     Vector("-i", "--in" , "--input"),     None,              "Path to input file.", true),
+    Opt.string("output",    Vector("-o", "--out", "--output"),    Some("/dev/null"), "Path to output file."),
+    Opt.int   ("log-level", Vector("-l", "--log", "--log-level"), Some(3),           "Log level to use."),
+    Opt.path  ("path",      Vector("-p", "--path"),               None,              "Path elements separated by ':' (*nix) or ';' (Windows)."),
+    Opt.seqString("""[-|]""")
+              ("things",    Vector("--things"),                   None,              "Path elements separated by '-' or '|'.", true),
+    Flag("quiet", Vector("-q", "--quiet"), "Suppress some verbose output."),
+    Flag("anti",  Vector("-a", "--anti"), "An \"antiflag\" (defaults to true)."),
+    Args.makeRemainingOpt("others", "Other stuff."))
+
+  val expectedDefaults = Map[String,Any](
+    Args.HELP_KEY -> false,
+    "quiet"       -> false,
+    "anti"        -> true,
+    "output"      -> "/dev/null",
+    "log-level"   -> 3)
+
+  val expectedValuesBefore = Map[String,Any](
+    Args.HELP_KEY -> false,
+    "quiet"       -> false,
+    "anti"        -> true,
+    "output"      -> "/dev/null",
+    "log-level"   -> 3)
+
+
+  val expectedAllValuesBefore =
+    expectedValuesBefore map { case (k,v) => k -> Vector(v) }
+
+  val expectedValuesAfter = Map[String,Any](
+    Args.HELP_KEY -> false,
+    "quiet"       -> true,
+    "anti"        -> false,
+    "input"       -> "/foo/bar",
+    "output"      -> "/out/baz",
+    "log-level"   -> 4,
+    "path"        -> Vector("a", "b", "c"),
+    "things"      -> Vector("a", "b", "c"))
+
+ val expectedRemainingBefore = Vector.empty[String]
+ val expectedRemainingAfter = Vector("one", "two", "three", "four")
+
+  val expectedAllValuesAfter =
+    expectedValuesAfter.map { case (k,v) => k -> Vector(v) }
+
 }
