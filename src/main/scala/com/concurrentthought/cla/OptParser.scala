@@ -9,11 +9,11 @@ object OptParser extends Parser {
 
   sealed trait Elem
 
-  case class OptElem(flags_remaining: FlagsTypeOrRemainingElem, help: String) extends Elem
+  case class OptElem(optional: Boolean, flags_remaining: FlagsAndType_Or_RemainingElem, help: String) extends Elem
 
-  abstract class FlagsTypeOrRemainingElem extends Elem
-  case class  FlagsAndTypeElem(flags: FlagsElem, typ: TypeElem[_]) extends FlagsTypeOrRemainingElem
-  case class  RemainingElem(name: String) extends FlagsTypeOrRemainingElem
+  abstract class FlagsAndType_Or_RemainingElem extends Elem
+  case class  FlagsAndTypeElem(flags: FlagsElem, typ: TypeElem[_]) extends FlagsAndType_Or_RemainingElem
+  case class  RemainingElem(name: String) extends FlagsAndType_Or_RemainingElem
 
 
   case class FlagsElem(flags: Seq[FlagElem]) extends Elem
@@ -46,17 +46,28 @@ object OptParser extends Parser {
   case class  PathTypeElem(ivs: String)   extends TypeElem[String](removeEQ(ivs))(identity)
   protected def whiteSpace = " \n\r\t\f"
 
-  def Opt: Rule1[OptElem] = rule { group((OptionalFlagsAndType | FlagsAndType) ~
-    optional(WhiteSpacePlus) ~ Help) ~~> ((ft: FlagsAndTypeElem, help: String) => OptElem(ft, help)) }
+  def Opt: Rule1[OptElem] = rule { OptionalOpt | RequiredOpt }
+
+  def OptionalOpt: Rule1[OptElem] = rule { group(OptionalFlagsAndType_Or_Remaining ~
+    optional(WhiteSpacePlus) ~ Help) ~~> ((ft: FlagsAndType_Or_RemainingElem, help: String) => OptElem(true, ft, help)) }
+  def RequiredOpt: Rule1[OptElem] = rule { group(FlagsAndType_Or_Remaining ~
+    optional(WhiteSpacePlus) ~ Help) ~~> ((ft: FlagsAndType_Or_RemainingElem, help: String) => OptElem(false, ft, help)) }
 
   def LeftBracket  = rule { "[" ~ WhiteSpaceStar }
   def RightBracket = rule { WhiteSpaceStar ~ "]" }
 
-  def OptionalFlagsAndType: Rule1[FlagsAndTypeElem] = rule {
-    group(LeftBracket ~ FlagsAndType ~ RightBracket) }
+  def OptionalFlagsAndType_Or_Remaining: Rule1[FlagsAndType_Or_RemainingElem] = rule {
+    group(LeftBracket ~ FlagsAndType_Or_Remaining ~ RightBracket) }
+
+  def FlagsAndType_Or_Remaining: Rule1[FlagsAndType_Or_RemainingElem] = rule {
+    (FlagsAndType | Remaining) }
 
   def FlagsAndType: Rule1[FlagsAndTypeElem] = rule {
     group(Flags ~ WhiteSpacePlus ~ TypeAndInit) ~~> ((f: FlagsElem, t: TypeElem[_]) => FlagsAndTypeElem(f,t)) }
+
+  // def Remaining: Rule1[RemainingElem] = rule { RT ~ (WhiteSpacePlus | EOI) }
+  // protected def RT = rule { Name ~~> (se => RemainingElem(se.text)) }
+  def Remaining: Rule1[RemainingElem] = rule { Name ~~> (se => RemainingElem(se.text)) }
 
   def Flags: Rule1[FlagsElem] = rule { oneOrMore(Flag, separator = WhiteSpaceStar ~ "|" ~ WhiteSpaceStar) ~~> FlagsElem }
   def Flag: Rule1[FlagElem]   = rule { Flag2 ~> FlagElem }
@@ -82,9 +93,6 @@ object OptParser extends Parser {
   def PathType:  Rule1[PathTypeElem] = rule { "path" ~ InitialValue ~> PathTypeElem }
   protected def SeqDIV = rule { group(Delim ~ InitialValue) ~> identity }
 
-  def Remaining: Rule1[RemainingElem] = rule { RT ~ (WhiteSpacePlus | EOI) }
-  protected def RT = rule { Name ~~> (se => RemainingElem(se.text)) }
-
   def Help: Rule1[String] = rule { zeroOrMore(ANY) ~> identity }
 
   def InitialValue = rule { optional("=" ~ oneOrMore(noneOf(whiteSpace+"[]"))) }
@@ -105,8 +113,8 @@ object OptParser extends Parser {
   def WhiteSpacePlus = rule { oneOrMore(WhiteSpace) }
 
   /** Parse a full option string */
-  // def parse(s: String): Either[ParsingException, Elem] =
-  //   parseWithRule(s, OptRule)
+  def parse(s: String): Either[ParsingException, OptElem] =
+    parseWithRule(s, Opt)
 
   def parseWithRule[E](s: String, rule: Rule1[E]): Either[ParsingException, E] =
     try {
