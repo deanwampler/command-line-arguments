@@ -8,6 +8,7 @@ import scala.language.existentials
 
 class OptParserSpec extends FunSpec with PropertyChecks with ParboiledTest {
   import OptParser._
+  import Elems._
 
   val leadingChar = ('a' to 'z') ++ ('A' to 'Z') ++ ('0' to '9') :+ '_'
   val leadingChars = Gen.oneOf(leadingChar)

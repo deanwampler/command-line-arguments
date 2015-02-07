@@ -34,6 +34,8 @@ object BuildSettings {
       scalaVersion       := ScalaVersion,
       crossScalaVersions := CrossScalaVersions,
       description        := "A library for handling command-line arguments.",
+      maxErrors          := 5,
+      triggeredMessage   := Watched.clearWhenTriggered,
 
       scalacOptions in Compile <<= scalaVersion map { v: String =>
         if (v.startsWith("2.10.")) scalac210Options

@@ -3,10 +3,8 @@ import org.parboiled.scala._
 import org.parboiled.errors.{ErrorUtils, ParsingException}
 import scala.language.existentials
 
-object OptParser extends Parser {
-
-  val knownTypes = Vector ("flag", "~flag", "string", "byte", "char", "int", "long", "float", "double", "seq", "path")
-
+/** A set of "Elements", used for convenient access from clients. */
+object Elems {
   sealed trait Elem
 
   case class OptElem(optional: Boolean, flags_remaining: FlagsAndType_Or_RemainingElem, help: String) extends Elem
@@ -44,6 +42,27 @@ object OptParser extends Parser {
 
   case class  SeqTypeElem(delimiter: String, ivs: String)  extends TypeElem[String](toVS(ivs))(identity)
   case class  PathTypeElem(ivs: String)   extends TypeElem[String](removeEQ(ivs))(identity)
+
+  private def removeEQ(s:String) =
+    if (s.startsWith("=")) s.substring(1,s.length) else s
+
+  // Because of the way the parse strings are passed to SeqTypeElem, the ivs
+  // string includes the delimiter string, so we remove it here, then remove
+  // the equals sign.
+  private def toVS(s:String) = {
+    val ary = s.split("=",2)
+    if (ary.length == 2) removeEQ(ary(1)) else ""
+  }
+}
+
+
+/** Parse a line defining an option. */
+object OptParser extends Parser {
+
+  val knownTypes = Vector ("flag", "~flag", "string", "byte", "char", "int", "long", "float", "double", "seq", "path")
+
+  import Elems._
+
   protected def whiteSpace = " \n\r\t\f"
 
   def Opt: Rule1[OptElem] = rule { OptionalOpt | RequiredOpt }
@@ -127,15 +146,4 @@ object OptParser extends Parser {
     } catch {
       case pe: ParsingException => Left(pe)
     }
-
-  private def removeEQ(s:String) =
-    if (s.startsWith("=")) s.substring(1,s.length) else s
-
-  // Because of the way the parse strings are passed to SeqTypeElem, the ivs
-  // string includes the delimiter string, so we remove it here, then remove
-  // the equals sign.
-  private def toVS(s:String) = {
-    val ary = s.split("=",2)
-    if (ary.length == 2) removeEQ(ary(1)) else ""
-  }
 }

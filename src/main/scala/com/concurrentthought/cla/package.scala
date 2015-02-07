@@ -1,4 +1,5 @@
 package com.concurrentthought
+import scala.util.Try
 
 /**
  * Package object that adds  a mini-DSL allowing the user to construct an `Args`
@@ -22,7 +23,7 @@ package object cla {
    *   |  [-l | --log | --log-level   int=3]              Log level to use.
    *   |   -p | --path                path                Path elements separated by ':' (*nix) or ';' (Windows).
    *   |  [-q | --quiet               flag]               Suppress some verbose output.
-   *   |        [--things             seq([-|])]          String elements separated by '-' or '|'.
+   *   |       [--things              seq([-|])]          String elements separated by '-' or '|'.
    *   |                              others              Other stuff.
    *   |""".stripMargin.toArgs
    * }}}
@@ -70,85 +71,97 @@ package object cla {
    * </ol>
    */
   implicit class ToArgs(str: String) {
+
+    import Elems._
+
+    protected implicit class FromRemainingElem(re: RemainingElem) {
+      def toOpt(optional: Boolean, help: String): Opt[String] = 
+        Args.makeRemainingOpt(re.name, help, !optional)
+    }
+
+    implicit class FromFlagTypeElem(e: FlagTypeElem) {
+      def toOpt(name: String, optional: Boolean, flags: Seq[String], help: String): Opt[Boolean] = 
+        Flag(name, flags, help, !optional)
+    }
+
+    protected abstract class FromTypeElem[T, TE <: TypeElem[T]](te: TE)(
+        make: (String, Seq[String], Option[T], String, Boolean) => Opt[T]) {
+      def toOpt(name: String, optional: Boolean, flags: Seq[String], help: String): Opt[T] = 
+        make(name, flags, te.initialValue, help, !optional)
+    }
+
+    implicit class FromStringTypeElem(e: StringTypeElem) 
+      extends FromTypeElem[String, StringTypeElem](e)(Opt.string)
+
+    implicit class FromByteTypeElem(e: ByteTypeElem) 
+      extends FromTypeElem[Byte, ByteTypeElem](e)(Opt.byte)
+
+    implicit class FromCharTypeElem(e: CharTypeElem) 
+      extends FromTypeElem[Char, CharTypeElem](e)(Opt.char)
+
+    implicit class FromIntTypeElem(e: IntTypeElem) 
+      extends FromTypeElem[Int, IntTypeElem](e)(Opt.int)
+
+    implicit class FromLongTypeElem(e: LongTypeElem) 
+      extends FromTypeElem[Long, LongTypeElem](e)(Opt.long)
+
+    implicit class FromFloatTypeElem(e: FloatTypeElem) 
+      extends FromTypeElem[Float, FloatTypeElem](e)(Opt.float)
+
+    implicit class FromDoubleTypeElem(e: DoubleTypeElem) 
+      extends FromTypeElem[Double, DoubleTypeElem](e)(Opt.double)
+
+
     def toArgs: Args = {
-      val lines = str.split("""\n""").filter(_.length != 0).toSeq
-      val (programInvocation, description, optLines) = lines.partition(_(0) != ' ') match {
-        case (Nil, seq) => ("", "", seq)
-        case (head +: Nil,  seq) => (head, "", seq)
-        case (head +: tail, seq) => (head, tail.mkString(" "), seq)
+      val leadingWhitespace = """^\s+""".r
+      val lines = str.split("\n").filter(_.length != 0).toVector
+      val (comments, optionStrs) = lines.partition { 
+        line => leadingWhitespace.findFirstMatchIn(line) == None
       }
-      val opts = optLines map { s =>
-        val (s2, required) = removeLeadingBracket(s)
-        val flagRE = """\s*(--?\w\S*)\s*\|?""".r
-        val flags = flagRE.findAllMatchIn(s2).map(_.toString).map {
-          case flagRE(flag) => flag
-        }.toVector
-        val rest = if (flags.size == 0) s2 else {
-          val Array(_, rest) = s2.split(flags.last, 2)
-          rest.trim
+      val opts = optionStrs map { line =>
+        OptParser.parse(line) match {
+          case Left(ex) => throw ParseError(ex.getMessage, ex)
+          case Right(OptElem(optional: Boolean, re: RemainingElem, help: String)) =>
+            Args.makeRemainingOpt(re.name, help, !optional)
+          case Right(OptElem(optional: Boolean, fte: FlagsAndTypeElem, help: String)) =>
+            val flagStrs = fte.flags.flags.map (_.flag)
+            val name = flagStrs.last.replaceAll("^--?", "")
+            toOpt(fte.typ, name, optional, flagStrs, help)
+          case Right(r) => throw ParseError("Unexpected element: "+r)
         }
-        val Array (typ1, help) = rest.split("""\s+""",2)
-        // Also remove leading "[" and trailing "]" if any.
-        // There will only be a leading "[" for the one allowed no-flag option.
-        val (typ, default) = typ1.split("""=""",2) match {
-          case Array(v,d) => 
-            val (d2, _) = removeTrailingBracket(d)
-            (v, Some(d2))
-          case Array(v) =>
-            val (v2, _) = removeLeadingBracket(v)
-            (v2, None)
-        }
-        // Use the LAST flag name (without the leading "-") as the name.
-        // For the case where there is no flag, use "remaining".
-        val name = if (flags.size == 0) Args.REMAINING_KEY else flags.last.replaceAll("^--?", "")
-        val typ2 = if (typ.endsWith("]")) typ.substring(0,typ.length-1) else typ
-        try {
-          fromType(typ2, name, flags, default, help, required)
-        } catch {
-          case InvalidType => throw InvalidTypeInArgsString(typ2, str)
-        }
+      }
+      val (programInvocation, description) = comments.size match {
+        case 0 => ("", "")
+        case 1 => (comments(0), "")
+        case _ => (comments(0), comments.slice(1, comments.size).mkString(" "))
       }
       Args(programInvocation, description, opts.toVector)
     }
 
-    protected def removeLeadingBracket(s: String): (String, Boolean) = {
-      val s2 = s.trim
-      if (s2.startsWith("[")) (s2.substring(1, s2.length), false) 
-      else (s2, true)
-    }
-    protected def removeTrailingBracket(s: String): (String, Boolean) = {
-      val s2 = s.trim
-      if (s2.endsWith("]")) (s2.substring(0, s2.length - 1), false) 
-      else (s2, true)
+    protected def toOpt(typeElem: TypeElem[_],
+      name: String, optional: Boolean, 
+      flags: Seq[String], help: String): Opt[_] = typeElem match {
+
+      case e: FlagTypeElem   => Flag(      name, flags, e.initialValue, help, !optional)
+      case e: StringTypeElem => Opt.string(name, flags, e.initialValue, help, !optional)
+      case e: ByteTypeElem   => Opt.byte(  name, flags, e.initialValue, help, !optional)
+      case e: CharTypeElem   => Opt.char(  name, flags, e.initialValue, help, !optional)
+      case e: IntTypeElem    => Opt.int(   name, flags, e.initialValue, help, !optional)
+      case e: LongTypeElem   => Opt.long(  name, flags, e.initialValue, help, !optional)
+      case e: FloatTypeElem  => Opt.float( name, flags, e.initialValue, help, !optional)
+      case e: DoubleTypeElem => Opt.double(name, flags, e.initialValue, help, !optional)
+      case e: SeqTypeElem    => Opt.seq(e.delimiter)(
+                                           name, flags, toInitSeq(e.initialValue, e.delimiter), help, !optional)(s => Try(s.toString))
+      case e: PathTypeElem   => Opt.path(  name, flags, toInitSeq(e.initialValue, Opt.pathSeparator), help, !optional)
     }
 
-    protected def fromType(typ: String,
-      name: String, flags: Seq[String], default: Option[String], 
-      help: String, required: Boolean): Opt[_] = {
-      val seqRE = """seq\(([^)]+)\)""".r
-      typ match {
-        case "flag"       => Flag(name, flags, help, required)
-        case "~flag"      => Flag.reverseSense(name, flags, help, required)
-        case "string"     => Opt.string(name, flags, default, help, required)
-        case "byte"       => Opt.byte(  name, flags, default.map(_.toByte), help, required)
-        case "char"       => Opt.char(  name, flags, default.map(_(0)), help, required)
-        case "int"        => Opt.int(   name, flags, default.map(_.toInt), help, required)
-        case "long"       => Opt.long(  name, flags, default.map(_.toLong), help, required)
-        case "float"      => Opt.float( name, flags, default.map(_.toFloat), help, required)
-        case "double"     => Opt.double(name, flags, default.map(_.toDouble), help, required)
-        case seqRE(delim) => Opt.seqString(delim)(name, flags, default.map(s => Seq(s)), help, required)
-        case "seq"        =>
-          println("com.concurrentthought.cla.dsl: WARNING, bare 'seq' (vs. 'seq(delim)') found. Using Opt.path.")
-          Opt.path(name, flags, default.map(s => Seq(s)), help, required)
-        case "path"       => Opt.path(name, flags, default.map(s => Seq(s)), help, required)
-        case name if (flags.size == 0) => Args.makeRemainingOpt(name, help, required)
-        case _ => throw new InvalidTypeInArgsString(typ, "")
-      }
-    }
-
-    case object InvalidType extends RuntimeException("")
-    case class InvalidTypeInArgsString(arg: String, all: String)
-      extends RuntimeException(s"Unknown type label $arg in argument string. All of string: $all")
+    protected def toInitSeq(init: Option[String], delim: String): Option[Seq[String]] = 
+      init.map(_.split(delim).toSeq)
   }
+}
+
+package cla {
+  case class ParseError(msg: String, cause: Throwable = null)
+    extends RuntimeException(msg, cause)
 }
 

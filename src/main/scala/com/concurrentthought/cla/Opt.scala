@@ -184,8 +184,10 @@ object Opt {
     default:      Option[Seq[String]] = None,
     help:         String = "List of file system paths",
     requiredFlag: Boolean = false) =
-      seqString(sys.props.getOrElse("path.separator",":"))(
+      seqString(pathSeparator)(
         name, flags, default, help, requiredFlag)
+
+  def pathSeparator: String = sys.props.getOrElse("path.separator",":")
 
   private def seqSupport[V](name: String, str: String, delimsRE: String,
     fromString: String => Try[V]): Try[Seq[V]] = {
@@ -244,7 +246,7 @@ case class Flag (
   help:         String = "",
   requiredFlag: Boolean = false) extends Opt[Boolean] {
 
-    val default = Some(false)
+    val default: Option[Boolean] = Some(false)
 
     // In Scala 2.11, we would simply put default.get in the definition of parser,
     // but in 2.10, we trip over a parse ambiguity of some kind...
@@ -257,9 +259,23 @@ case class Flag (
 
 /** Companion object for `Flag`. */
 object Flag {
+
   /**
-   * Like `apply`, but the value is "flipped"; it defaults to `true`, but if the
-   * user supplies the flag, the value is `false`.
+   * Like the default `apply`, but allows the user to specify the value
+   * explicitly, rather than defaulting to true.
+   */
+  def apply(
+  name:         String,
+  flags:        Seq[String],
+  value:        Option[Boolean],
+  help:         String,
+  requiredFlag: Boolean) = new Flag(name, flags, help, requiredFlag) {
+    override val default = value
+  }
+
+  /**
+   * Like the default `apply`, but the value is "flipped"; it defaults to `true`,
+   * but if the user supplies the flag, the value is `false`.
    */
   def reverseSense(
   name:         String,
