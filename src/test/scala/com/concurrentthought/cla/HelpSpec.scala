@@ -46,7 +46,7 @@ class HelpSpec extends FunSpec {
         |                                        (default: foo)
         |  [-q | --quiet]                        Suppress some verbose output.
         |  [remaining]                           All remaining arguments that aren't associated with flags.
-        |You can also use --foo=bar syntax. Arguments shown in [...] are option. All others are required.
+        |You can also use --foo=bar syntax. Arguments shown in [...] are optional. All others are required.
         |""".stripMargin)
     }
 
@@ -98,7 +98,7 @@ class HelpSpec extends FunSpec {
         |  [-i | --i | --int  int]    int help message
         |                             (default: 0)
         |  [remaining]                All remaining arguments that aren't associated with flags.
-        |You can also use --foo=bar syntax. Arguments shown in [...] are option. All others are required.
+        |You can also use --foo=bar syntax. Arguments shown in [...] are optional. All others are required.
         |""".stripMargin)
     }
   }

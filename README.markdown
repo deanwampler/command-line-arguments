@@ -3,7 +3,7 @@
 Dean Wampler, Ph.D.
 [@deanwampler](https://twitter.com/deanwampler)
 
-This is a [Scala](http://scala-lang.org) library for handling command-line arguments. It has no dependencies on other libraries (other than [ScalaTest](http://scalatest.org)), so its footprint is small.
+This is a [Scala](http://scala-lang.org) library for handling command-line arguments. It has few dependencies on other libraries, [Parboiled](https://github.com/sirthias/parboiled/wiki/parboiled-for-Scala) for parsing and for testing, [ScalaTest](http://scalatest.org) and [ScalaCheck](http://scalacheck.org), so its footprint is small.
 
 ## Usage
 

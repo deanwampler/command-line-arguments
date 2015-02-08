@@ -19,7 +19,7 @@ class ArgsSpec extends FunSpec {
       }
 
       it ("but the default help can be overridden, as long as the option has the name field \"help\".") {
-        val altHelp = Flag(
+        val altHelp = Opt.flag(
           name   = Args.HELP_KEY,
           flags  = Seq("-H", "--H", "--HELP"),
           help   = "Show this HELP message.")
@@ -269,6 +269,7 @@ class ArgsSpec extends FunSpec {
         val expected = """
           |Command line arguments:
           |        help: false
+          |        anti: true
           |      string: foobar
           |        byte: 0
           |        char: x
@@ -288,6 +289,7 @@ class ArgsSpec extends FunSpec {
       it ("prints the default values overridden by user-specified options (the last invocation of any one option...) after parsing is done") {
         val args = Args(opts = allOpts).parse(Array(
           "--help",
+          "--anti",
           "--string",     "hello",
           "--byte",       "3",
           "--char",       "abc",
@@ -306,6 +308,7 @@ class ArgsSpec extends FunSpec {
         val expected = """
           |Command line arguments:
           |        help: true
+          |        anti: false
           |      string: hello
           |        byte: 3
           |        char: a
@@ -331,6 +334,7 @@ class ArgsSpec extends FunSpec {
         val expected = """
           |Command line arguments (all values given):
           |        help: Vector(false)
+          |        anti: Vector(true)
           |      string: Vector(foobar)
           |        byte: Vector(0)
           |        char: Vector(x)
@@ -350,6 +354,7 @@ class ArgsSpec extends FunSpec {
       it ("prints the default values overridden by user-specified options after parsing is done") {
         val args = Args(opts = allOpts).parse(Array(
           "--help",
+          "--anti",
           "--string",     "hello",
           "--byte",       "3",
           "--char",       "abc",
@@ -368,6 +373,7 @@ class ArgsSpec extends FunSpec {
         val expected = """
           |Command line arguments (all values given):
           |        help: Vector(true)
+          |        anti: Vector(false)
           |      string: Vector(hello)
           |        byte: Vector(3)
           |        char: Vector(a)
@@ -450,6 +456,7 @@ class ArgsSpec extends FunSpec {
       "bar"))
     val values = Map[String,Any](
       Args.HELP_KEY -> false,
+      "anti"        -> true,
       "string"      -> "world!",
       "byte"        ->   3,
       "char"        -> 'a',
@@ -462,6 +469,7 @@ class ArgsSpec extends FunSpec {
       "path"        -> Vector("/foo/bar", "/home/me"))
     val allValues = Map[String,Seq[Any]](
       Args.HELP_KEY -> Vector(false),
+      "anti"        -> Vector(true),
       "string"      -> Vector("hello", "world!"),
       "byte"        -> Vector(2,3),
       "char"        -> Vector('a'),

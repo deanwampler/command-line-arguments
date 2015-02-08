@@ -74,44 +74,6 @@ package object cla {
 
     import Elems._
 
-    protected implicit class FromRemainingElem(re: RemainingElem) {
-      def toOpt(optional: Boolean, help: String): Opt[String] = 
-        Args.makeRemainingOpt(re.name, help, !optional)
-    }
-
-    implicit class FromFlagTypeElem(e: FlagTypeElem) {
-      def toOpt(name: String, optional: Boolean, flags: Seq[String], help: String): Opt[Boolean] = 
-        Flag(name, flags, help, !optional)
-    }
-
-    protected abstract class FromTypeElem[T, TE <: TypeElem[T]](te: TE)(
-        make: (String, Seq[String], Option[T], String, Boolean) => Opt[T]) {
-      def toOpt(name: String, optional: Boolean, flags: Seq[String], help: String): Opt[T] = 
-        make(name, flags, te.initialValue, help, !optional)
-    }
-
-    implicit class FromStringTypeElem(e: StringTypeElem) 
-      extends FromTypeElem[String, StringTypeElem](e)(Opt.string)
-
-    implicit class FromByteTypeElem(e: ByteTypeElem) 
-      extends FromTypeElem[Byte, ByteTypeElem](e)(Opt.byte)
-
-    implicit class FromCharTypeElem(e: CharTypeElem) 
-      extends FromTypeElem[Char, CharTypeElem](e)(Opt.char)
-
-    implicit class FromIntTypeElem(e: IntTypeElem) 
-      extends FromTypeElem[Int, IntTypeElem](e)(Opt.int)
-
-    implicit class FromLongTypeElem(e: LongTypeElem) 
-      extends FromTypeElem[Long, LongTypeElem](e)(Opt.long)
-
-    implicit class FromFloatTypeElem(e: FloatTypeElem) 
-      extends FromTypeElem[Float, FloatTypeElem](e)(Opt.float)
-
-    implicit class FromDoubleTypeElem(e: DoubleTypeElem) 
-      extends FromTypeElem[Double, DoubleTypeElem](e)(Opt.double)
-
-
     def toArgs: Args = {
       val leadingWhitespace = """^\s+""".r
       val lines = str.split("\n").filter(_.length != 0).toVector
@@ -142,7 +104,7 @@ package object cla {
       name: String, optional: Boolean, 
       flags: Seq[String], help: String): Opt[_] = typeElem match {
 
-      case e: FlagTypeElem   => Flag(      name, flags, e.initialValue, help, !optional)
+      case e: FlagTypeElem   => Opt.flag(  name, flags, toBool(e.initialValue), help, !optional)
       case e: StringTypeElem => Opt.string(name, flags, e.initialValue, help, !optional)
       case e: ByteTypeElem   => Opt.byte(  name, flags, e.initialValue, help, !optional)
       case e: CharTypeElem   => Opt.char(  name, flags, e.initialValue, help, !optional)
@@ -155,6 +117,8 @@ package object cla {
       case e: PathTypeElem   => Opt.path(  name, flags, toInitSeq(e.initialValue, Opt.pathSeparator), help, !optional)
     }
 
+    protected def toBool(o: Option[Boolean]): Boolean = o.getOrElse(false)
+    
     protected def toInitSeq(init: Option[String], delim: String): Option[Seq[String]] = 
       init.map(_.split(delim).toSeq)
   }

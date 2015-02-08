@@ -2,8 +2,8 @@ package com.concurrentthought.cla
 import scala.util.{Try, Success, Failure}
 
 /**
- * Abstraction or a command-line option, with or without a corresponding value.
- * It has the following fields:
+ * A command-line option, which might actually be required, with a corresponding
+ * value. It has the following fields:
  * <ol>
  * <li>`name` - serve as a lookup key for retrieving the value.</li>
  * <li>`flags` - the arguments that invoke the option, e.g., `-h` and `--help`.</li>
@@ -12,21 +12,35 @@ import scala.util.{Try, Success, Failure}
  * <li>`required` - the user must specify this option on the command line. 
  *     This flag is effectively ignored if a `default` is provided.</li>
  * <li>`parser` - An implementation feature for parsing arguments.</li>
+ * <li>`fromString: String => V` - convert the found value from a String to the correct type.</li>
  * </ol>
  */
-sealed trait Opt[V] {
-  def name:       String
-  def flags:      Seq[String]
-  def help:       String
-  def default:    Option[V]
-  def parser:     Opt.Parser[V]
+case class Opt[V] (
+  name:         String,
+  flags:        Seq[String],
+  default:      Option[V] = None,
+  help:         String = "",
+  requiredFlag: Boolean = false)(fromString: String => Try[V]) {
 
-  protected def requiredFlag:   Boolean
+  require (name.length != 0, "The Opt name can't be empty.")
+
+  protected val optEQRE = "^([^=]+)=(.*)$".r
 
   /** Is the required flag true _and_ the default is None? */
   def required: Boolean = requiredFlag && default == None
 
-  require (name.length != 0, "The Opt name can't be empty.")
+  val parser: Opt.Parser[V] = {
+    case optEQRE(flag, value) +: tail if flags.contains(flag) => parserHelper(flag, value, tail)
+    case flag +: value +: tail if flags.contains(flag) => parserHelper(flag, value, tail)
+  }
+
+  protected def parserHelper(flag: String, value: String, tail: Seq[String]) = fromString(value) match {
+    case sv @ Success(v)  => ((name, sv), tail)
+    case Failure(ex) => ex match {
+      case ivs: Opt.InvalidValueString => ((name, Failure(ivs)), tail)
+      case ex => ((name, Failure(Opt.InvalidValueString(flag, value, Some(ex)))), tail)
+    }
+  }
 }
 
 object Opt {
@@ -65,18 +79,39 @@ object Opt {
     }
 
   /**
-   * Construct an option that takes a value. For an option that doesn't
-   * take a value, see `Flag`.
+   * An implementation class for flags (boolean) options.
    */
-  def apply[V](
+  protected[cla] class Flag(
     name:         String,
     flags:        Seq[String],
-    default:      Option[V] = None,
+    defaultValue: Boolean = false,
     help:         String = "",
-    requiredFlag: Boolean = false)(fromString: String => Try[V]) =
-      OptWithValue[V](name, flags, default, help, requiredFlag)(fromString)
+    requiredFlag: Boolean = false) extends Opt[Boolean](
+      name, flags, Some(defaultValue), help, requiredFlag)(toTry(_.toBoolean)) {
+
+    // Override the parser so it doesn't consume the next token (if any).
+    override val parser: Opt.Parser[Boolean] = {
+      case flag +: tail if flags.contains(flag) => parserHelper(flag, (!defaultValue).toString, tail)
+    }
+  }
 
   // Helper methods to create options.
+
+  /** 
+   * Create a "flag" (Boolean) option. Unlike all the other kinds of 
+   * options, <em>it does not consume an argument that follows it.</em>
+   * Instead the inferred value is the opposite of the default value. For example,
+   * if the flag is `--quiet` and the default value is `false`, then
+   * using the flag sets the option to `true`.
+   * Note that the `default` argument is <em>not</em> an `Option` and it defaults to `false`.
+   */
+  def flag(
+    name:         String,
+    flags:        Seq[String],
+    defaultValue: Boolean = false,
+    help:         String = "",
+    requiredFlag: Boolean = false) = new Flag(
+      name, flags, defaultValue, help, requiredFlag)
 
   /** Create a String option */
   def string(
@@ -200,88 +235,5 @@ object Opt {
     }
     f(str.split(delimsRE), Vector.empty[V])
   }
-
 }
 
-/**
- * A command line argument where an explicit value should follow.
- * In addition to the fields in `Opt`, this type adds the following:
- * <ol>
- * <li>`fromString: String => V` - convert the found value from a String to the correct type.</li>
- * </ol>
- */
-case class OptWithValue[V] (
-  name:         String,
-  flags:        Seq[String],
-  default:      Option[V] = None,
-  help:         String = "",
-  requiredFlag: Boolean = false)(fromString: String => Try[V]) extends Opt[V] {
-
-  protected val opteqRE = "^([^=]+)=(.*)$".r
-
-  val parser: Opt.Parser[V] = {
-    case opteqRE(flag, value) +: tail if flags.contains(flag) => parserHelper(flag, value, tail)
-    case flag +: value +: tail if flags.contains(flag) => parserHelper(flag, value, tail)
-  }
-
-  protected def parserHelper(flag: String, value: String, tail: Seq[String]) = fromString(value) match {
-    case sv @ Success(v)  => ((name, sv), tail)
-    case Failure(ex) => ex match {
-      case ivs: Opt.InvalidValueString => ((name, Failure(ivs)), tail)
-      case ex => ((name, Failure(Opt.InvalidValueString(flag, value, Some(ex)))), tail)
-    }
-  }
-}
-
-
-/**
- * An option that is just a flag, with no value. By default, its presence
- * indicates "true" for the corresponding option and if the flag isn't specified
- * by the user, then "false" is indicated. However, you can construct a `Flag`
- * with the sense "flipped" using `Flag.reverseSense()`.
- */
-case class Flag (
-  name:         String,
-  flags:        Seq[String],
-  help:         String = "",
-  requiredFlag: Boolean = false) extends Opt[Boolean] {
-
-    val default: Option[Boolean] = Some(false)
-
-    // In Scala 2.11, we would simply put default.get in the definition of parser,
-    // but in 2.10, we trip over a parse ambiguity of some kind...
-    private lazy val d = default.get
-
-    val parser: Opt.Parser[Boolean] = {
-      case flag +: tail if flags.contains(flag) => ((name, Success(!d)), tail)
-    }
-}
-
-/** Companion object for `Flag`. */
-object Flag {
-
-  /**
-   * Like the default `apply`, but allows the user to specify the value
-   * explicitly, rather than defaulting to true.
-   */
-  def apply(
-  name:         String,
-  flags:        Seq[String],
-  value:        Option[Boolean],
-  help:         String,
-  requiredFlag: Boolean) = new Flag(name, flags, help, requiredFlag) {
-    override val default = value
-  }
-
-  /**
-   * Like the default `apply`, but the value is "flipped"; it defaults to `true`,
-   * but if the user supplies the flag, the value is `false`.
-   */
-  def reverseSense(
-  name:         String,
-  flags:        Seq[String],
-  help:         String = "",
-  requiredFlag: Boolean = false) = new Flag(name, flags, help, requiredFlag) {
-    override val default = Some(true)
-  }
-}

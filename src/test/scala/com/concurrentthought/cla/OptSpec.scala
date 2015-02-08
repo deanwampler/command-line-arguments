@@ -102,6 +102,32 @@ class OptSpec extends FunSpec {
   }
 
   describe ("object Opt") {
+     
+    describe ("flag() constructs a Boolean option") {
+      it ("defaults the value to false") {
+        assert(helpFlag.default === Some(false))
+      }
+
+      it ("can be set to use true as the default value") {
+        assert(antiFlag.default === Some(true))
+      }
+
+      it ("does not consume any values in the argument list.") {
+        val result = helpFlag.parser(Seq("--help", "one", "two"))
+        assert(Seq("one", "two")   === result._2)
+      }
+
+      it ("returns true if the option is used and the default was false.") {
+        val result = helpFlag.parser(Seq("--help", "one", "two"))
+        assert((Args.HELP_KEY, Success(true)) === result._1)
+      }
+
+      it ("returns false if the option is used and the default was true.") {
+        val result = antiFlag.parser(Seq("--anti", "one", "two"))
+        assert(("anti", Success(false)) === result._1)
+      }
+    }
+     
     describe ("string() constructs a String option") {
       it ("returns the value string unmodified") {
         val result = stringOpt.parser(Seq("--string", "foo", "one", "two"))
@@ -259,67 +285,6 @@ class OptSpec extends FunSpec {
         val expected = Try(path.split(pathDelim).toVector)
         val result = pathOpt.parser(Seq("--path", path, "one", "two"))
         assert((("path", expected), Seq("one", "two")) === result)
-      }
-    }
-  }
-
-  describe ("case class Flag") {
-    it ("requires a non-empty name") {
-      intercept [IllegalArgumentException] {
-        Flag(
-          name    = "",
-          flags   = Seq("-h", "--h", "--help"),
-          help    = "help message")
-      }
-      ()  // Suppress -Ywarn-value-discard warning
-    }
-
-    it ("allows an empty help message") {
-      // No exception thrown:
-      Flag(
-        name    = Args.HELP_KEY,
-        flags   = Seq("-h", "--h", "--help"))
-      ()  // Suppress -Ywarn-value-discard warning
-    }
-
-    it ("defaults the value to Some(false)") {
-      val flag = Flag(
-        name    = "in",
-        flags   = Seq("-i", "--in", "--input"),
-        help    = "help message")
-      assert(flag.default === Some(false))
-    }
-
-    it ("does not consume any values in the argument list.") {
-      val result = Args.helpFlag.parser(Seq("--help", "one", "two"))
-      assert(Seq("one", "two")   === result._2)
-    }
-
-    it ("returns true if the option is used.") {
-      val result = Args.helpFlag.parser(Seq("--help", "one", "two"))
-      assert((Args.HELP_KEY, Success(true)) === result._1)
-    }
-  }
-
-  describe ("object Flag") {
-    val antihelp = Flag.reverseSense(
-      name    = "antihelp",
-      flags   = Seq("-a", "--ah", "--antihelp"),
-      help    = "anti help message")
-
-    describe ("reverseSense") {
-      it ("supports a reverse sense option with Flag.reverseSense") {
-        assert(antihelp.default === Some(true))
-      }
-
-      it ("does not consume any values in the argument list.") {
-        val result = antihelp.parser(Seq("--antihelp", "one", "two"))
-        assert(Seq("one", "two")   === result._2)
-      }
-
-      it ("returns false if the option is used.") {
-        val result = antihelp.parser(Seq("--antihelp", "one", "two"))
-        assert(("antihelp", Success(false)) === result._1)
       }
     }
   }

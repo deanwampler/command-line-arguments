@@ -295,13 +295,13 @@ object Args {
   // Common options.
 
   /** Show Help. Normally the program will exit afterwards. */
-  val helpFlag = Flag(
+  val helpFlag = Opt.flag(
     name   = HELP_KEY,
     flags  = Seq("-h", "--h", "--help"),
     help   = "Show this help message.")
 
   /** Minimize logging and other output. */
-  val quietFlag = Flag(
+  val quietFlag = Opt.flag(
     name  = "quiet",
     flags = Seq("-q", "--quiet"),
     help  = "Suppress some verbose output.")
@@ -314,7 +314,7 @@ object Args {
     name: String = REMAINING_KEY,
     help: String = "All remaining arguments that aren't associated with flags.",
     requiredFlag: Boolean = false) =
-      new OptWithValue[String](name = name, flags = Nil, help = help, requiredFlag = requiredFlag)(s => Try(s)) {
+      new Opt[String](name = name, flags = Nil, help = help, requiredFlag = requiredFlag)(s => Try(s)) {
 
         /** Now there are no flags expected as the first token. */
         override val parser: Opt.Parser[String] = {

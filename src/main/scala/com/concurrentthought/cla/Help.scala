@@ -11,8 +11,7 @@ object Help {
   /**
    * Return the help string for the given `Args`.
    * Note that the formatted help message will include the default values for the
-   * options, when they are defined, but excluding `Flag`s where the default is
-   * always true or false, depending on the sense of the option.
+   * options, when they are defined.
    */
   def apply(args: Args): String = {
     val lines = Vector(s"Usage: ${args.programInvocation} [options]", args.description) ++
@@ -41,8 +40,8 @@ object Help {
 
   protected def toFlagsHelp(opt: Opt[_]): String = {
     val prefix = "  "
-    val valueName = opt match {
-      case f: Flag => ""
+    val valueName = opt match { 
+      case f: Opt.Flag => ""
       case _ => opt.name
     }
     val s = opt.flags.mkString(" | ")
@@ -71,8 +70,8 @@ object Help {
    * A bit of a hack...
    */
   protected def trailing(args: Args): String =
-    if (args.opts.exists(o => o.isInstanceOf[OptWithValue[_]] && o.flags != Nil)) {
-      "You can also use --foo=bar syntax. Arguments shown in [...] are option. All others are required."
+    if (args.opts.exists(o => o.isInstanceOf[Opt.Flag] == false && o.flags != Nil)) {
+      "You can also use --foo=bar syntax. Arguments shown in [...] are optional. All others are required."
     } else ""
 
   protected def wrap(s: String): Vector[String] = {

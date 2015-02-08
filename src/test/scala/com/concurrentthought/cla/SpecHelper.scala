@@ -4,6 +4,17 @@ object SpecHelper {
 
   val noremains = Args.REMAINING_KEY -> Vector.empty[String]
 
+  val helpFlag = Opt.flag(
+    name    = Args.HELP_KEY,
+    flags   = Seq("-h", "--h", "--help"),
+    help    = "help message")
+
+  val antiFlag = Opt.flag(
+    name    = "anti",
+    flags   = Seq("-a", "--anti"),
+    defaultValue = true,
+    help    = "anti help message")
+
   val stringOpt = Opt.string(
     name    = "string",
     flags   = Seq("-s", "--s", "--string"),
@@ -70,10 +81,10 @@ object SpecHelper {
 
   val pathDelim = sys.props.getOrElse("path.separator",":")
 
-  protected val allOpts1 = Vector(stringOpt, byteOpt, charOpt, intOpt, longOpt,
-    floatOpt, doubleOpt, seqOpt, seqStringOpt, pathOpt)
+  protected val allOpts1 = Vector(helpFlag, antiFlag, stringOpt, byteOpt, charOpt,
+    intOpt, longOpt, floatOpt, doubleOpt, seqOpt, seqStringOpt, pathOpt)
   val allOpts = allOpts1 :+ othersOpt
-  val allDefaults = allOpts1.map(o => (o.name, o.default.get)).toMap + (Args.HELP_KEY -> false)
+  val allDefaults = allOpts1.map(o => (o.name, o.default.get)).toMap 
   val allRemaining = Vector.empty[String]
 
 
@@ -98,8 +109,8 @@ object SpecHelper {
     Opt.path  ("path",      Vector("-p", "--path"),               None,              "Path elements separated by ':' (*nix) or ';' (Windows)."),
     Opt.seqString("""[-|]""")
               ("things",    Vector("--things"),                   None,              "Path elements separated by '-' or '|'.", true),
-    Flag("quiet", Vector("-q", "--quiet"), "Suppress some verbose output."),
-    Flag("anti",  Vector("-a", "--anti"), "An \"antiflag\" (defaults to true)."),
+    Opt.flag("quiet", Vector("-q", "--quiet"), false, "Suppress some verbose output."),
+    Opt.flag("anti",  Vector("-a", "--anti"),  true,  "An \"antiflag\" (defaults to true)."),
     Args.makeRemainingOpt("others", "Other stuff."))
 
   val expectedDefaults = Map[String,Any](
