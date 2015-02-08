@@ -9,8 +9,9 @@ class CLAPackageSpec extends FunSpec {
 
       it ("converts a multi line string into an Args") {
         val args = argsStr.toArgs
-        assert(args.programInvocation === "java -cp ... foo")
-        assert(args.description       === "Some description and a second line.")
+        assert(args.programInvocation  === "java -cp ... foo")
+        assert(args.leadingComments    === "Some description and a second line.")
+        assert(args.trailingComments   === "Comments after the options, which can be multiple lines.")
         checkBefore(args)
       }
 
@@ -25,21 +26,23 @@ class CLAPackageSpec extends FunSpec {
           "--path",      s"a${pathDelim}b${pathDelim}c",
           "--things",    "a-b|c",
           "three", "four"))
-        assert(args.programInvocation === "java -cp ... foo")
-        assert(args.description       === "Some description and a second line.")
+        assert(args.programInvocation  === "java -cp ... foo")
+        assert(args.leadingComments    === "Some description and a second line.")
+        assert(args.trailingComments   === "Comments after the options, which can be multiple lines.")
         checkAfter(args)
       }
     }
 
     describe("The String Format") {
       describe ("starts with zero or more lines, with no leading spaces") {
-        it ("uses a blank 'program invocation' and 'description' if no such lines appear") {
+        it ("uses a blank 'program invocation' and 'comments' if no such lines appear") {
           val str = """
             |  -i | --in  | --input      string              Path to input file.
             |""".stripMargin
           val args = str.toArgs
-          assert(args.programInvocation === "")
-          assert(args.description       === "")
+          assert(args.programInvocation  === "")
+          assert(args.leadingComments    === "")
+          assert(args.trailingComments   === "")
         }
         it ("uses the first such line as the 'program invocation'.") {
           val str = """
@@ -47,10 +50,10 @@ class CLAPackageSpec extends FunSpec {
             |  -i | --in  | --input      string              Path to input file.
             |""".stripMargin
           val args = str.toArgs
-          assert(args.programInvocation === "java -cp ... foo")
-          assert(args.description       === "")
+          assert(args.programInvocation  === "java -cp ... foo")
+          assert(args.leadingComments    === "")
         }
-        it ("uses all subsequent lines as the 'description', joined together into one, space-separated line") {
+        it ("uses all subsequent lines as the 'leading comments', joined together into one, space-separated line") {
           val str = """
             |java -cp ... foo
             |Some description
@@ -58,8 +61,23 @@ class CLAPackageSpec extends FunSpec {
             |  -i | --in  | --input      string              Path to input file.
             |""".stripMargin
           val args = str.toArgs
-          assert(args.programInvocation === "java -cp ... foo")
-          assert(args.description       === "Some description and a second line.")
+          assert(args.programInvocation  === "java -cp ... foo")
+          assert(args.leadingComments    === "Some description and a second line.")
+          assert(args.trailingComments   === "")
+        }
+        it ("uses all trailing lines with no leading whitespace after the options as the 'trailing comments', joined together into one, space-separated line") {
+          val str = """
+            |java -cp ... foo
+            |Some description
+            |and a second line.
+            |  -i | --in  | --input      string              Path to input file.
+            |Comments after the options,
+            |which can be multiple lines.
+            |""".stripMargin
+          val args = str.toArgs
+          assert(args.programInvocation  === "java -cp ... foo")
+          assert(args.leadingComments    === "Some description and a second line.")
+          assert(args.trailingComments   === "Comments after the options, which can be multiple lines.")
         }
       }
 
@@ -82,16 +100,16 @@ class CLAPackageSpec extends FunSpec {
   protected def checkBefore(args: Args) = {
     // assert(args.opts === expectedOpts)
     (args.opts zip expectedOpts) foreach { case (o, eo) => assert(o === eo) }
-    assert(args.defaults === expectedDefaults)
-    assert(args.values === expectedValuesBefore)
+    assert(args.defaults  === expectedDefaults)
+    assert(args.values    === expectedValuesBefore)
     assert(args.allValues === expectedAllValuesBefore)
     assert(args.remaining === expectedRemainingBefore)
   }
 
   protected def checkAfter(args: Args) = {
     (args.opts zip expectedOpts) foreach { case (o, eo) => assert(o === eo) }
-    assert(args.defaults === expectedDefaults)
-    assert(args.values === expectedValuesAfter)
+    assert(args.defaults  === expectedDefaults)
+    assert(args.values    === expectedValuesAfter)
     assert(args.allValues === expectedAllValuesAfter)
     assert(args.remaining === expectedRemainingAfter)
   }

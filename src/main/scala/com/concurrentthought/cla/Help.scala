@@ -14,10 +14,10 @@ object Help {
    * options, when they are defined.
    */
   def apply(args: Args): String = {
-    val lines = Vector(s"Usage: ${args.programInvocation} [options]", args.description) ++
+    val lines = Vector(s"Usage: ${args.programInvocation} [options]", args.leadingComments) ++
       errorsHelp(args) ++
-      Vector("Where the supported options are the following:") ++
-      argsHelp(args) :+ trailing(args)
+      Vector("Where the supported options are the following:", "") ++
+      argsHelp(args) ++ Vector("", trailing(args), args.trailingComments)
     (for { s <- lines } yield s).mkString("", "\n", "\n")
   }
 

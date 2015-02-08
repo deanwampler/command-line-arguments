@@ -45,6 +45,7 @@ object CLASampleMain {
       |  [--things                  seq([-|])]          String elements separated by '-' or '|'.
       |  [-q | --quiet              flag]               Suppress some verbose output.
       |                             others              Other arguments.
+      |Note that --input and "others" are required.
       |""".stripMargin.toArgs
 
     process(args, argstrings)
@@ -119,7 +120,10 @@ Before discussing the `process` method shown, let's see two alternative, program
       help     = "Other arguments",
       requiredFlag = true)
 
-    val args = Args("run-main CLASampleMain [options]", "Demonstrates the CLA API.",
+    val args = Args(
+      "run-main CLASampleMain [options]", 
+      "Demonstrates the CLA API.",
+      """Note that --input and "others" are required.""",
       Seq(input, output, logLevel, path, things, Args.quietFlag, others)).parse(argstrings)
 
     process(args, argstrings)
@@ -145,7 +149,10 @@ Here is a slightly more concise way to write the content in `main2`:
   def main3(argstrings: Array[String]) = {
     import Opt._
     import Args._
-    val args = Args("run-main CLASampleMain [options]", "Demonstrates the CLA API.",
+    val args = Args(
+      "run-main CLASampleMain [options]", 
+      "Demonstrates the CLA API.",
+      """Note that --input and "others" are required.""",
       Seq(
         string("input",     Seq("-i", "--in", "--input"),      None,              "Path to input file."),
         string("output",    Seq("-o", "--out", "--output"),    Some("/dev/null"), "Path to output file."),

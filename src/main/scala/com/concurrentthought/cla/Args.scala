@@ -14,7 +14,8 @@ import java.io.PrintStream
  */
 case class Args protected (
   programInvocation: String,
-  description:       String,
+  leadingComments:   String,
+  trailingComments:  String,
   opts:              Seq[Opt[_]],
   defaults:          Map[String,Any],
   values:            Map[String,Any],
@@ -206,7 +207,8 @@ case class Args protected (
 
   override def toString = s"""Args:
   |  program invocation: $programInvocation
-  |         description: $description
+  |    leading comments: $leadingComments
+  |   trailing comments: $trailingComments
   |                opts: $opts
   |            defaults: $defaults
   |              values: $values
@@ -223,34 +225,41 @@ object Args {
   val REMAINING_KEY = "remaining"
 
   val defaultProgramInvocation: String = "java -cp ..."
-  val defaultDescription: String = ""
+  val defaultComments: String = ""
 
   def empty: Args = {
-      apply(Args.defaultProgramInvocation, Args.defaultDescription, Nil)
+      apply(Args.defaultProgramInvocation, Args.defaultComments, Args.defaultComments, Nil)
     }
 
   def apply(opts: Seq[Opt[_]]): Args = {
-      apply(Args.defaultProgramInvocation, Args.defaultDescription, opts)
+      apply(Args.defaultProgramInvocation, Args.defaultComments, Args.defaultComments, opts)
+    }
+
+  def apply(programInvocation: String, opts: Seq[Opt[_]]): Args = {
+      apply(programInvocation, Args.defaultComments, Args.defaultComments, opts)
     }
 
   def apply(
     programInvocation: String,
-    description: String,
+    leadingComments:   String,
+    trailingComments:  String,
     opts: Seq[Opt[_]]): Args = {
       def defs = defaults(opts)
-      apply(programInvocation, description, opts, defs, defs)
+      apply(programInvocation, leadingComments, trailingComments, opts, defs, defs)
     }
 
   def apply(
     programInvocation: String,
-    description: String,
+    leadingComments:   String,
+    trailingComments:  String,
     opts: Seq[Opt[_]],
     defaults: Map[String,Any]): Args =
-      apply(programInvocation, description, opts, defaults, defaults)
+      apply(programInvocation, leadingComments, trailingComments, opts, defaults, defaults)
 
   def apply(
     programInvocation: String,
-    description: String,
+    leadingComments:   String,
+    trailingComments:  String,
     opts: Seq[Opt[_]],
     defaults: Map[String,Any],
     values: Map[String,Any]): Args = {
@@ -289,7 +298,8 @@ object Args {
     }
     val allValues1 = values1.map{ case (k,v) => (k,Vector(v)) }
     val failures1  = Seq.empty[(String,Any)]
-    new Args(programInvocation, description, opts1, defaults1, values1, allValues1, remaining1, failures1)
+    new Args(programInvocation, leadingComments, trailingComments,
+      opts1, defaults1, values1, allValues1, remaining1, failures1)
   }
 
   // Common options.

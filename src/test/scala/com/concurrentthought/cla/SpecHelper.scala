@@ -100,6 +100,8 @@ object SpecHelper {
     |  [-q | --quiet               flag]               Suppress some verbose output.
     |  [-a | --anti                ~flag]              An "antiflag" (defaults to true).
     |                              [others]            Other stuff.
+    |Comments after the options,
+    |which can be multiple lines.
     |""".stripMargin
 
   val expectedOpts = Vector(Args.helpFlag,

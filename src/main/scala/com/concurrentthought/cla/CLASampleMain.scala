@@ -27,6 +27,7 @@ object CLASampleMain {
       |  [--things                  seq([-|])]          String elements separated by '-' or '|'.
       |  [-q | --quiet              flag]               Suppress some verbose output.
       |                             others              Other arguments.
+      |Note that --input and "others" are required.
       |""".stripMargin.toArgs
 
     process(args, argstrings)
@@ -61,7 +62,10 @@ object CLASampleMain {
       help     = "Other arguments",
       requiredFlag = true)
 
-    val args = Args("run-main CLASampleMain [options]", "Demonstrates the CLA API.",
+    val args = Args(
+      "run-main CLASampleMain [options]", 
+      "Demonstrates the CLA API.",
+      """Note that --input and "others" are required.""",
       Seq(input, output, logLevel, path, things, Args.quietFlag, others)).parse(argstrings)
 
     process(args, argstrings)
@@ -74,7 +78,10 @@ object CLASampleMain {
   def main3(argstrings: Array[String]) = {
     import Opt._
     import Args._
-    val args = Args("run-main CLASampleMain [options]", "Demonstrates the CLA API.",
+    val args = Args(
+      "run-main CLASampleMain [options]", 
+      "Demonstrates the CLA API.",
+      """Note that --input and "others" are required.""",
       Seq(
         string("input",     Seq("-i", "--in", "--input"),      None,              "Path to input file.", true),
         string("output",    Seq("-o", "--out", "--output"),    Some("/dev/null"), "Path to output file."),

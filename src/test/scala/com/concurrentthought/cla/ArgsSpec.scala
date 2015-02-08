@@ -6,11 +6,28 @@ class ArgsSpec extends FunSpec {
   import SpecHelper._
 
   describe ("case class Args") {
+    describe ("empty program invocation and comments") {
+      it ("includes default values") {
+        val args = Args.empty
+        assert(args.programInvocation === Args.defaultProgramInvocation)
+        assert(args.leadingComments   === Args.defaultComments)
+        assert(args.trailingComments  === Args.defaultComments)
+      }
+    }
+    describe ("nonempty program invocation and comments") {
+      it ("includes the specified values") {
+        val args = Args("programInvocation", "leadingComments", "trailingComments", Nil)
+        assert(args.programInvocation === "programInvocation")
+        assert(args.leadingComments   === "leadingComments")
+        assert(args.trailingComments  === "trailingComments")
+      }
+    }
     describe ("empty list of options") {
       it ("still includes help") {
         val args = Args.empty.parse(Array("--help"))
         assert(args.programInvocation === Args.defaultProgramInvocation)
-        assert(args.description       === Args.defaultDescription)
+        assert(args.leadingComments   === Args.defaultComments)
+        assert(args.trailingComments  === Args.defaultComments)
         val helpName = Args.helpFlag.name
         assert(args.opts.contains(Args.helpFlag))
         assert(args.defaults.contains(helpName))
@@ -41,8 +58,6 @@ class ArgsSpec extends FunSpec {
         val args2 = args.parse(Array("foo", "bar"))
         val remainingName = Args.remainingOpt.name
         Seq(args, args2) foreach { a =>
-          assert(a.programInvocation === Args.defaultProgramInvocation)
-          assert(a.description       === Args.defaultDescription)
           assert(a.opts.contains(Args.remainingOpt))
           assert(a.defaults.contains(remainingName) === false)
           assert(a.values.contains(remainingName) === false)

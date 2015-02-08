@@ -25,14 +25,16 @@ package object cla {
    *   |  [-q | --quiet               flag]               Suppress some verbose output.
    *   |       [--things              seq([-|])]          String elements separated by '-' or '|'.
    *   |                              others              Other stuff.
+   *   |Any additional help description lines,
+   *   |which also have no leading whitespace.
    *   |""".stripMargin.toArgs
    * }}}
    * The format, as illustrated in the example, has the following requirements:
    * <ol>
-   * <li>The leading lines without opening whitespace are interpreted as the
-   *   "program invocation" string in the help message, followed by zero or more
-   *   description lines, which will be concatenated together (separated by
-   *   whitespace) in the help message.</li>
+   * <li>Zero or more leading and trailing lines without opening whitespace are
+   *   interpreted as the "program invocation" string in the help message, 
+   *   followed by zero or more description lines, which will be concatenated
+   *   together (separated by whitespace) in the help message.</li>
    * <li>Each option appears on a line with leading whitespace.</li>
    * <li>Each option has one or more flags, separated by "|". As a special case,
    *   one option can have no flags. It is used to provide a help message for all other
@@ -75,12 +77,26 @@ package object cla {
     import Elems._
 
     def toArgs: Args = {
-      val leadingWhitespace = """^\s+""".r
       val lines = str.split("\n").filter(_.length != 0).toVector
-      val (comments, optionStrs) = lines.partition { 
-        line => leadingWhitespace.findFirstMatchIn(line) == None
+
+      // Partition the lines into the leading comments, the options (which have
+      // leading whitespace), and the trailing comments.
+      type VS = Vector[String]
+      val  ve = Vector.empty[String]
+      def split(lines: Vector[String], result: (VS,VS,VS)): (VS,VS,VS) = {
+        val leadingWhitespace = """^\s+""".r
+        val (l,o,t) = result
+        lines match {
+          case head +: tail => leadingWhitespace.findFirstMatchIn(head) match {
+            case None if o.size == 0 => split(tail, (l :+ head, o, t))
+            case None => split(tail, (l, o, t :+ head))
+            case _ => split(tail, (l, o :+ head, t))
+          }
+          case _ => result
+        }
       }
-      val opts = optionStrs map { line =>
+      val (leading, options, trailing) = split(lines, (ve,ve,ve))
+      val opts = options map { line =>
         OptParser.parse(line) match {
           case Left(ex) => throw ParseError(ex.getMessage, ex)
           case Right(OptElem(optional: Boolean, re: RemainingElem, help: String)) =>
@@ -92,12 +108,12 @@ package object cla {
           case Right(r) => throw ParseError("Unexpected element: "+r)
         }
       }
-      val (programInvocation, description) = comments.size match {
+      val (programInvocation, description) = leading.size match {
         case 0 => ("", "")
-        case 1 => (comments(0), "")
-        case _ => (comments(0), comments.slice(1, comments.size).mkString(" "))
+        case 1 => (leading(0), "")
+        case n => (leading(0), leading.slice(1, n).mkString(" "))
       }
-      Args(programInvocation, description, opts.toVector)
+      Args(programInvocation, description, trailing.mkString(" "), opts.toVector)
     }
 
     protected def toOpt(typeElem: TypeElem[_],
@@ -118,7 +134,7 @@ package object cla {
     }
 
     protected def toBool(o: Option[Boolean]): Boolean = o.getOrElse(false)
-    
+
     protected def toInitSeq(init: Option[String], delim: String): Option[Seq[String]] = 
       init.map(_.split(delim).toSeq)
   }

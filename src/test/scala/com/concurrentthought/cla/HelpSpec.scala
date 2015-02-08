@@ -28,13 +28,17 @@ class HelpSpec extends FunSpec {
 
   describe ("Help") {
     it ("returns a help string based on the command-line arguments") {
-      val args = Args("java HelpSpec", "A ScalaTest for the Help class.",
-                      Seq(inOpt, outOpt, reqOpt1, reqOpt2, Args.quietFlag))
+      val args = Args(
+        "java HelpSpec", 
+        "A ScalaTest for the Help class.",
+        "Trailing comments.",
+        Seq(inOpt, outOpt, reqOpt1, reqOpt2, Args.quietFlag))
       val help = Help(args)
       assert(help ===
         s"""Usage: java HelpSpec [options]
         |A ScalaTest for the Help class.
         |Where the supported options are the following:
+        |
         |  [-h | --h | --help]                   Show this help message.
         |   -i | --in | --input  in              Input files with an extremely long help message that should
         |                                        be wrapped by Help so it doesn't run off the screen like it
@@ -46,18 +50,23 @@ class HelpSpec extends FunSpec {
         |                                        (default: foo)
         |  [-q | --quiet]                        Suppress some verbose output.
         |  [remaining]                           All remaining arguments that aren't associated with flags.
+        |
         |You can also use --foo=bar syntax. Arguments shown in [...] are optional. All others are required.
+        |Trailing comments.
         |""".stripMargin)
     }
 
     def doOptionalArgs() = {
-      val help = Help(Args("java HelpSpec", "", Nil))
+      val help = Help(Args("java HelpSpec", Nil))
       assert(help ===
         s"""Usage: java HelpSpec [options]
         |
         |Where the supported options are the following:
+        |
         |  [-h | --h | --help]    Show this help message.
         |  [remaining]            All remaining arguments that aren't associated with flags.
+        |
+        |
         |
         |""".stripMargin)
     }
@@ -72,19 +81,26 @@ class HelpSpec extends FunSpec {
       doOptionalArgs
     }
     it ("the 'remaining' arguments can be specified explicitly to make them required") {
-      val help = Help(Args("java HelpSpec", "", Seq(Args.makeRemainingOpt(requiredFlag=true))))
+      val help = Help(Args("java HelpSpec", Seq(Args.makeRemainingOpt(requiredFlag=true))))
       assert(help ===
         s"""Usage: java HelpSpec [options]
         |
         |Where the supported options are the following:
+        |
         |  [-h | --h | --help]    Show this help message.
         |   remaining             All remaining arguments that aren't associated with flags.
+        |
+        |
         |
         |""".stripMargin)
     }
 
     it ("returns a help string that includes the error messages after parsing") {
-      val args = Args("java HelpSpec", "A ScalaTest for no user-defined options.", Seq(intOpt))
+      val args = Args(
+        "java HelpSpec", 
+        "A ScalaTest for no user-defined options.", 
+        "Trailing comments.",
+        Seq(intOpt))
         .parse(Seq("--foo", "--int", "x"))
       val help = Help(args)
       assert(help ===
@@ -94,11 +110,14 @@ class HelpSpec extends FunSpec {
         |  Unrecognized argument (or missing value): --foo (rest of arguments: --int x)
         |  Invalid value string: x for option --int (cause: java.lang.NumberFormatException: For input string: "x")
         |Where the supported options are the following:
+        |
         |  [-h | --h | --help]        Show this help message.
         |  [-i | --i | --int  int]    int help message
         |                             (default: 0)
         |  [remaining]                All remaining arguments that aren't associated with flags.
+        |
         |You can also use --foo=bar syntax. Arguments shown in [...] are optional. All others are required.
+        |Trailing comments.
         |""".stripMargin)
     }
   }
