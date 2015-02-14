@@ -10,8 +10,8 @@ package com.concurrentthought.cla
  * run -i /in -o /out -l 4 -p a:b --things x-y|z foo bar baz
  * run --in /in --out=/out -l=4 --path "a:b" --things=x-y|z -q foo bar baz
  * }}}
- * The last example demonstrates that both `flag value` and `flag=value` syntax
- * is supported. The "[...]" indicate optional arguments, so in this example, 
+ * The last example demonstrates that both `argflag value` and `argflag=value`
+ * syntax is supported. The "[...]" indicate optional arguments, so in this example, 
  * you must specify the `input` argument and at least one token for "others".
  */
 object CLASampleMain {

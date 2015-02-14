@@ -3,7 +3,7 @@
 Dean Wampler, Ph.D.
 [@deanwampler](https://twitter.com/deanwampler)
 
-This is a [Scala](http://scala-lang.org) library for handling command-line arguments. It has few dependencies on other libraries, [Parboiled](https://github.com/sirthias/parboiled/wiki/parboiled-for-Scala) for parsing and for testing, [ScalaTest](http://scalatest.org) and [ScalaCheck](http://scalacheck.org), so its footprint is small.
+This is a [Scala](http://scala-lang.org) library for handling command-line arguments. It has few dependencies on other libraries, [Parboiled](https://github.com/sirthias/parboiled/wiki/parboiled-for-Scala), for parsing, and [ScalaTest](http://scalatest.org) and [ScalaCheck](http://scalacheck.org), for testing. So its footprint is small.
 
 ## Usage
 
@@ -19,7 +19,7 @@ resolvers ++= Seq(
 scalaVersion := "2.11.4"  // or 2.10.4
 
 libraryDependencies ++= Seq(
-  "com.concurrentthought.cla" %% "command-line-arguments" % "0.2.1"
+  "com.concurrentthought.cla" %% "command-line-arguments" % "0.3.0"
 )
 ```
 
@@ -55,7 +55,7 @@ object CLASampleMain {
 
 The [Scaladocs comments](src/main/scala/com/concurrentthought/cla/package.scala) for the [cla package](src/main/scala/com/concurrentthought/cla/package.scala) explain the format and its limitations, but hopefully most of the format is reasonable intuitive from the example.
 
-The first lines of the string that *don't* have leading whitespace are interpreted as lines to show as part of the corresponding help message, including an example of how to invoke the program and zero or more additional descriptions.
+The first and last lines in the string that *don't* have leading whitespace are interpreted as lines to show as part of the corresponding help message. It's a good idea to use the first line to show an example of how to invoke the program.
 
 Next come the command-line options, one per line. Each must start with whitespace, followed by zero or more flags separated by `|`. There can be at most one option that has no flags. It is used to provide a help message for how command-line tokens that aren't associated with flags will be interpreted. (Note that the library will still handle these tokens whether or not you specify a line like this.)
 
@@ -63,28 +63,29 @@ To indicate that an option can be omitted by the user (i.e., it's truly _optiona
 
 In this example, all are optional except for the `--input` and `others` arguments.
 
-The center "column" specifies the type of the option and an optional default value, which is indicated with an equals `=` sign. The following "types" are supported:
+The center "column" specifies the type of the option. All but the `flag` and `~flag` types accept an optional default value, which is indicated with an equals `=` sign. The following "types" are supported:
 
-|   String | Interpretation  | Corresponding Helper Method    | Default Values Supported? |
-| -------: | :-------------- | :------------------------------ | :-------------- |
-| `flag`   | `Boolean` value | [Flag](src/main/scala/com/concurrentthought/cla/Opt.scala) (case class) | `false` (note 1) |
-| `~flag`   | `Boolean` value | [Flag](src/main/scala/com/concurrentthought/cla/Opt.scala) (case class) | `true` (note 1) |
-| `string` | `String` value  | [Opt.string](src/main/scala/com/concurrentthought/cla/Opt.scala) | yes |
-|   `byte` |   `Byte` value  | [Opt.byte](src/main/scala/com/concurrentthought/cla/Opt.scala) | yes |
-|   `char` |   `Char` value  | [Opt.char](src/main/scala/com/concurrentthought/cla/Opt.scala) | yes |
-|    `int` |    `Int` value  | [Opt.int](src/main/scala/com/concurrentthought/cla/Opt.scala) | yes |
-|   `long` |   `Long` value  | [Opt.long](src/main/scala/com/concurrentthought/cla/Opt.scala) | yes |
-|  `float` |  `Float` value  | [Opt.float](src/main/scala/com/concurrentthought/cla/Opt.scala) | yes |
-| `double` | `Double` value  | [Opt.double](src/main/scala/com/concurrentthought/cla/Opt.scala) | yes |
-|  `path`  | "path-like" `Seq[String]` (note 2) | [Opt.path](src/main/scala/com/concurrentthought/cla/Opt.scala)   | no (note 3) |
-|   `seq`  | `Seq[String]` (note 2) | [Opt.seqString](src/main/scala/com/concurrentthought/cla/Opt.scala)            | no (note 3) |
-| *other*  | Only allowed for the single, no-flags case | [Args.remainingOpt](src/main/scala/com/concurrentthought/cla/Args.scala) | no (note 3) |
+|   String | Interpretation  | Corresponding Helper Method    | 
+| -------: | :-------------- | :----------------------------- |
+|  `flag`  | `Boolean` value | [Opt.flag](src/main/scala/com/concurrentthought/cla/Opt.scala) |
+| `~flag`  | `Boolean` value | [Opt.flag](src/main/scala/com/concurrentthought/cla/Opt.scala) |
+| `string` | `String` value  | [Opt.string](src/main/scala/com/concurrentthought/cla/Opt.scala) |
+|   `byte` |   `Byte` value  | [Opt.byte](src/main/scala/com/concurrentthought/cla/Opt.scala) |
+|   `char` |   `Char` value  | [Opt.char](src/main/scala/com/concurrentthought/cla/Opt.scala) |
+|    `int` |    `Int` value  | [Opt.int](src/main/scala/com/concurrentthought/cla/Opt.scala) |
+|   `long` |   `Long` value  | [Opt.long](src/main/scala/com/concurrentthought/cla/Opt.scala) |
+|  `float` |  `Float` value  | [Opt.float](src/main/scala/com/concurrentthought/cla/Opt.scala) |
+| `double` | `Double` value  | [Opt.double](src/main/scala/com/concurrentthought/cla/Opt.scala) |
+|   `seq`  | `Seq[String]` [1] | [Opt.seqString](src/main/scala/com/concurrentthought/cla/Opt.scala) |
+|  `path`  | "path-like" `Seq[String]` [1] | [Opt.path](src/main/scala/com/concurrentthought/cla/Opt.scala) |
+| *other*  | Only allowed for the single, no-flags case | [Args.remainingOpt](src/main/scala/com/concurrentthought/cla/Args.scala) |
 
-* **Note 1:** Both `flag` and `~flag` represent `Boolean` flags where no value is supplied (e.g., `--help`). While `flag` defaults to `false` if not specified, `~flag` ("tilde" or "not" flag) defaults to `true`.
-* **Note 2:** Both `path` and `seq` split an argument using the delimiter regex. For `path`, this is the platform-specific path separator, given by `sys.props.getOrElse("path.separator", ":")`. For `seq`, you must provide the delimiter regex using a suffix of the form `(delimRE)`, as shown in the example.
-* **Note 3:** It's an implementation limitation that default values can't be specified using this approach. You can do this if you build the [Args](src/main/scala/com/concurrentthought/cla/Args.scala) with the API, as shown below.
 
-So, when an option expects something other than a `String`, the token given on the command line (or as a default here) will be parsed into the correct type, with error handling captured in the [Args.failures](src/main/scala/com/concurrentthought/cla/Args.scala) field.
+1: Both `path` and `seq` split an argument using the delimiter regular expression. For `path`, this is the platform-specific path separator, given by `sys.props.getOrElse("path.separator", ":")`. It is designed for class paths, etc. For `seq`, you must provide the delimiter regular expression using a suffix of the form `(delimRE)`. In the example above, the regex is `[-|]` (split on either `-` or `|`).
+
+Both `flag` and `~flag` represent `Boolean` flags where no default value can be supplied (e.g., `--help`). The value corresponding to a `flag` defaults to `false` if the user doesn't invoke the flag on the command line, `~flag` ("tilde" or "not" flag) defaults to `true`.
+
+So, when an option expects something other than a `String`, the token given on the command line (or as a default value) will be parsed into the correct type, with error handling captured in the [Args.failures](src/main/scala/com/concurrentthought/cla/Args.scala) field.
 
 Finally, the rest of the text on a line is the help message for the option.
 
@@ -246,6 +247,6 @@ Try running the following examples within SBT (`run` and `run-main com.concurren
  run --in /in --out=/out -l=4 --path "a:b" --things=x-y|z foo bar baz
 ```
 
-The last example mixes `flag value` and `flag=value` syntax, which of are both supported.
+The last example mixes `argflag value` and `argflag=value` syntax, which of are both supported.
 
 Try a few runs with unknown flags and other errors. Note the error handling that's done, such as when you omit a value expected by a flag, or you provide an invalid value, such as `--log-level foo`.

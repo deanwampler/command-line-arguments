@@ -120,7 +120,9 @@ package object cla {
       name: String, optional: Boolean, 
       flags: Seq[String], help: String): Opt[_] = typeElem match {
 
-      case e: FlagTypeElem   => Opt.flag(  name, flags, toBool(e.initialValue), help, !optional)
+      case e: FlagTypeElem   => 
+        if (toBool(e.initialValue) == false) Opt.flag(name, flags, help, !optional)
+        else Opt.notflag(name, flags, help, !optional)
       case e: StringTypeElem => Opt.string(name, flags, e.initialValue, help, !optional)
       case e: ByteTypeElem   => Opt.byte(  name, flags, e.initialValue, help, !optional)
       case e: CharTypeElem   => Opt.char(  name, flags, e.initialValue, help, !optional)

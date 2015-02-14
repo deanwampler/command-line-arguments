@@ -9,10 +9,9 @@ object SpecHelper {
     flags   = Seq("-h", "--h", "--help"),
     help    = "help message")
 
-  val antiFlag = Opt.flag(
+  val antiFlag = Opt.notflag(
     name    = "anti",
     flags   = Seq("-a", "--anti"),
-    defaultValue = true,
     help    = "anti help message")
 
   val stringOpt = Opt.string(
@@ -105,14 +104,14 @@ object SpecHelper {
     |""".stripMargin
 
   val expectedOpts = Vector(Args.helpFlag,
-    Opt.string("input",     Vector("-i", "--in" , "--input"),     None,              "Path to input file.", true),
-    Opt.string("output",    Vector("-o", "--out", "--output"),    Some("/dev/null"), "Path to output file."),
-    Opt.int   ("log-level", Vector("-l", "--log", "--log-level"), Some(3),           "Log level to use."),
-    Opt.path  ("path",      Vector("-p", "--path"),               None,              "Path elements separated by ':' (*nix) or ';' (Windows)."),
+    Opt.string( "input",     Vector("-i", "--in" , "--input"),     None,              "Path to input file.", true),
+    Opt.string( "output",    Vector("-o", "--out", "--output"),    Some("/dev/null"), "Path to output file."),
+    Opt.int   ( "log-level", Vector("-l", "--log", "--log-level"), Some(3),           "Log level to use."),
+    Opt.path  ( "path",      Vector("-p", "--path"),               None,              "Path elements separated by ':' (*nix) or ';' (Windows)."),
     Opt.seqString("""[-|]""")
-              ("things",    Vector("--things"),                   None,              "Path elements separated by '-' or '|'.", true),
-    Opt.flag("quiet", Vector("-q", "--quiet"), false, "Suppress some verbose output."),
-    Opt.flag("anti",  Vector("-a", "--anti"),  true,  "An \"antiflag\" (defaults to true)."),
+              ( "things",    Vector("--things"),                   None,              "Path elements separated by '-' or '|'.", true),
+    Opt.flag(   "quiet",     Vector("-q", "--quiet"),                                 "Suppress some verbose output."),
+    Opt.notflag("anti",      Vector("-a", "--anti"),                                  "An \"antiflag\" (defaults to true)."),
     Args.makeRemainingOpt("others", "Other stuff."))
 
   val expectedDefaults = Map[String,Any](

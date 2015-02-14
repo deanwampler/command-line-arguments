@@ -100,18 +100,28 @@ object Opt {
   /** 
    * Create a "flag" (Boolean) option. Unlike all the other kinds of 
    * options, <em>it does not consume an argument that follows it.</em>
-   * Instead the inferred value is the opposite of the default value. For example,
-   * if the flag is `--quiet` and the default value is `false`, then
-   * using the flag sets the option to `true`.
-   * Note that the `default` argument is <em>not</em> an `Option` and it defaults to `false`.
+   * Instead the inferred default value corresponding to the flag is false.
+   * If a user specifies the flag on the command line, the corresponding value
+   * is true.
+   * @see Opt.notflag
    */
   def flag(
     name:         String,
     flags:        Seq[String],
-    defaultValue: Boolean = false,
     help:         String = "",
-    requiredFlag: Boolean = false) = new Flag(
-      name, flags, defaultValue, help, requiredFlag)
+    requiredFlag: Boolean = false) = 
+      new Flag(name, flags, false, help, requiredFlag)
+
+  /** 
+   * Like `flag`, but the default value is true, not false.
+   * @see Opt.flag
+   */
+  def notflag(
+    name:         String,
+    flags:        Seq[String],
+    help:         String = "",
+    requiredFlag: Boolean = false) = 
+      new Flag(name, flags, true, help, requiredFlag)
 
   /** Create a String option */
   def string(

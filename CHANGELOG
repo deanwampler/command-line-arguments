@@ -1,0 +1,19 @@
+Version 0.3.0 (2015-02-14)
+--------------------------
+- String "DSL" now parsed with a Parboiled parser.
+- Internal refactoring and simplification.
+
+Version 0.2.1 (2015-01-15)
+--------------------------
+- Scala 2.11.4 and 2.10.4 support.
+- Added the concept of required vs. "optional" options.
+
+Version 0.2.0 (2015-01-15)
+--------------------------
+- First public release
+- Added a "path" type option.
+
+Version 0.1.0 (2015-01-15)
+--------------------------
+- Initial private release.
+
