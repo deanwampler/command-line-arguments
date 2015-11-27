@@ -14,9 +14,9 @@ import sbtrelease.Utilities._
 object BuildSettings {
 
   val Name = "command-line-arguments"
-  val Version = "0.3.0"
-  val ScalaVersion  = "2.11.4"
-  val CrossScalaVersions = Seq("2.10.4", "2.11.4")
+  val Version = "0.3.2"
+  val ScalaVersion  = "2.11.7"
+  val CrossScalaVersions = Seq("2.10.5", "2.11.7")
 
   val minScalacOptions = Vector("-deprecation", "-unchecked", "-feature",
     "-encoding", "utf8")
@@ -82,9 +82,9 @@ object CLABuild extends Build {
   import Resolvers._
   import BuildSettings._
 
-  val parboiled  = "org.parboiled"  %% "parboiled-scala" % "1.1.6"
-  val scalaTest  = "org.scalatest"  %% "scalatest"       % "2.2.1"  % "test"
-  val scalaCheck = "org.scalacheck" %% "scalacheck"      % "1.12.1" % "test"
+  val parboiled  = "org.parboiled"  %% "parboiled-scala" % "1.1.7"
+  val scalaTest  = "org.scalatest"  %% "scalatest"       % "2.2.4"  % "test"
+  val scalaCheck = "org.scalacheck" %% "scalacheck"      % "1.12.5" % "test"
 
   val dependencies = Seq(parboiled, scalaTest, scalaCheck)
 
