@@ -14,7 +14,7 @@ import sbtrelease.Utilities._
 object BuildSettings {
 
   val Name = "command-line-arguments"
-  val Version = "0.3.2"
+  val Version = "0.3.3"
   val ScalaVersion  = "2.11.7"
   val CrossScalaVersions = Seq("2.10.5", "2.11.7")
 
