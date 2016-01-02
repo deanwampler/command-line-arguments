@@ -11,6 +11,27 @@ import sbtrelease.ReleasePlugin.ReleaseKeys._
 import sbtrelease.ReleaseStateTransformations._
 import sbtrelease.Utilities._
 
+// Shell prompt which show the current project,
+// git branch and build version
+object ShellPrompt {
+  object devnull extends ProcessLogger {
+    def info (s: => String) {}
+    def error (s: => String) { }
+    def buffer[T] (f: => T): T = f
+  }
+  def currBranch = (
+    ("git status -sb".lines_!(devnull).headOption)
+      getOrElse "-" stripPrefix "## "
+  )
+
+  def prompt(version: String) = {
+    (state: State) => {
+      val currProject = Project.extract (state).currentProject.id
+      "%s:%s:%s> ".format (currProject, currBranch, version)
+    }
+  }
+}
+
 object BuildSettings {
 
   val Name = "command-line-arguments"
@@ -27,7 +48,7 @@ object BuildSettings {
   val scalac210Options = commonScalacOptions
   val scalac211Options = commonScalacOptions ++ Vector("-Ywarn-infer-any", "-Ywarn-unused-import")
 
- lazy val buildSettings =
+  lazy val buildSettings =
     Defaults.coreDefaultSettings ++ buildInfoSettings ++ releaseSettings ++ Seq (
       name               := Name,
       version            := Version,
@@ -36,6 +57,7 @@ object BuildSettings {
       description        := "A library for handling command-line arguments.",
       maxErrors          := 5,
       triggeredMessage   := Watched.clearWhenTriggered,
+      shellPrompt        := ShellPrompt.prompt(Version),
 
       scalacOptions in Compile <<= scalaVersion map { v: String =>
         if (v.startsWith("2.10.")) scalac210Options
@@ -60,27 +82,6 @@ object BuildSettings {
     )
 }
 
-// Shell prompt which show the current project,
-// git branch and build version
-object ShellPrompt {
-  object devnull extends ProcessLogger {
-    def info (s: => String) {}
-    def error (s: => String) { }
-    def buffer[T] (f: => T): T = f
-  }
-  def currBranch = (
-    ("git status -sb".lines_!(devnull).headOption)
-      getOrElse "-" stripPrefix "## "
-  )
-
-  def prompt(version: String) = {
-    (state: State) => {
-      val currProject = Project.extract (state).currentProject.id
-      "%s:%s:%s> ".format (currProject, currBranch, version)
-    }
-  }
-}
-
 
 object CLABuild extends Build {
   import Resolvers._
@@ -92,13 +93,21 @@ object CLABuild extends Build {
 
   val dependencies = Seq(parboiled, scalaTest, scalaCheck)
 
-  lazy val claProject = Project(
-    id = BuildSettings.Name,
-    base = file("."),
-    settings = buildSettings ++ Seq(
-      shellPrompt := ShellPrompt.prompt(BuildSettings.Version),
+  lazy val cla = project
+    .settings(moduleName := BuildSettings.Name)
+    .settings(buildSettings)
+    .dependsOn(core, examples)
+
+  lazy val core = project.in(file("core"))
+    .settings(moduleName := s"${BuildSettings.Name}-core")
+    .settings(buildSettings ++ Seq(
       exportJars  := true,
       libraryDependencies ++= dependencies))
+
+  lazy val examples = project.in(file("examples"))
+    .settings(moduleName := s"${BuildSettings.Name}-examples")
+    .settings(buildSettings)
+    .dependsOn(core)
 }
 
 

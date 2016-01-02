@@ -1,3 +1,11 @@
+Version 0.4.0 (2016-01-02)
+--------------------------
+- Reworked the API for invoking the parsing. There is now a `process` method 
+which automatically handles printing the help message, when the user requests
+help or an invalid option is specified, then exiting. 
+- Reorganized the project into a "core", which is the released library, and an
+"examples" project, which currently consists only of `CLASampleMain.scala`.
+
 Version 0.3.3 (2015-11-27)
 --------------------------
 - Fixed regression in 0.3.2.
