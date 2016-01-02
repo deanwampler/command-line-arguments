@@ -36,10 +36,32 @@ case class Args protected (
     opts2.map(_.parser) reduceLeft (_ orElse _) orElse unknownOptionMatch orElse remainingOpt.parser
 
   /**
+   * Convenience method to parse the argument list and handle errors or
+   * help requests.
+   * If a parsing error occurs or help is requested, an appropriate message
+   * is printed to the `out` argument and the program exits with a call to
+   * `sys.exit(n)` with the integer exit returned by the sister `Args#process` 
+   * method. Normally, the default values for the `out` and `exit` arguments 
+   * are only overridden for testing.
+   * For more customized handling, {@see #parse}.
+   * @return Args
+   */
+  def process(
+    args: Seq[String], 
+    out: PrintStream = Console.out,
+    exit: Int => Unit = n => sys.exit(n)): Args = {
+    val newArgs = parse(args)
+    if (newArgs.handleHelp(out)) exit(0)
+    else if (newArgs.handleErrors(out)) exit(1)
+    newArgs
+  }
+
+  /**
    * Parse the user-specified arguments, using `parserChain`. Note that if
    * an unrecognized flag is found, i.e., a string that starts with one or two
    * '-', it is an error. Otherwise, all unrecognized options are added to the
    * resulting `values` in a `Seq[String]` with the key, "remaining".
+   * @return Args
    */
   def parse(args: Seq[String]): Args = {
     def p(args2: Seq[String]): Seq[(String, Any)] = args2 match {

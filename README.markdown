@@ -19,7 +19,7 @@ resolvers ++= Seq(
 scalaVersion := "2.11.7"  // or 2.10.5
 
 libraryDependencies ++= Seq(
-  "com.concurrentthought.cla" %% "command-line-arguments" % "0.3.3"
+  "com.concurrentthought.cla" %% "command-line-arguments" % "0.4.0"
 )
 ```
 
@@ -35,7 +35,7 @@ import com.concurrentthought.cla._
 object CLASampleMain {
 
   def main(argstrings: Array[String]) = {
-    val args: Args = """
+    val initialArgs: Args = """
       |run-main CLASampleMain [options]
       |Demonstrates the CLA API.
       |   -i | --in  | --input      string              Path to input file.
@@ -48,7 +48,14 @@ object CLASampleMain {
       |Note that --input and "others" are required.
       |""".stripMargin.toArgs
 
-    process(args, argstrings)
+    // Process the input arguments. If help requested or an error occurs,
+    // a message is written to stdout and the program exits with an error code.
+    // Default arguments for `process` aren't shown. See also Args#parse() for 
+    // more flexible handling.
+    val finalArgs: Args = initialArgs.process(argstrings)
+
+    // If here, successfully parsed the args and none where "--help" or "-h".
+    showResults(finalArgs)
   }
   ...
 ```
@@ -121,19 +128,20 @@ Before discussing the `process` method shown, let's see two alternative, program
       help     = "Other arguments",
       requiredFlag = true)
 
-    val args = Args(
+    val initialArgs = Args(
       "run-main CLASampleMain [options]", 
       "Demonstrates the CLA API.",
       """Note that --input and "others" are required.""",
-      Seq(input, output, logLevel, path, things, Args.quietFlag, others)).parse(argstrings)
+      Seq(input, output, logLevel, path, things, Args.quietFlag, others))
 
-    process(args, argstrings)
+    val finalArgs: Args = initialArgs.process(argstrings)
+    showResults(finalArgs)
   }
   ...
 }
 ```
 
- Each option is defined using a [com.concurrentthought.cla.Opt](src/main/scala/com/concurrentthought/cla/Opt.scala) value. In this case, there are helper methods in the `Opt` companion object for constructing options where the values are strings or numbers. The `string` and `int` helpers are used here for `String` and `Int` arguments, respectively).
+Each option is defined using a [com.concurrentthought.cla.Opt](src/main/scala/com/concurrentthought/cla/Opt.scala) value. In this case, there are helper methods in the `Opt` companion object for constructing options where the values are strings or numbers. The `string` and `int` helpers are used here for `String` and `Int` arguments, respectively).
 
 The arguments to each of these helpers (and also for `Opt[V].apply()` that they invoke) is the option name, used to retrieve the value later, a `Seq` of flags for command line invocation, an optional default value if the command-line argument isn't used (defaults to `None`), a help string (defaults to ""), and a boolean flag indicating whether or not the "option" is required (defaults to `false`, which is sort of the opposite behavior of the string DSL discussed previously).
 
@@ -150,7 +158,7 @@ Here is a slightly more concise way to write the content in `main2`:
   def main3(argstrings: Array[String]) = {
     import Opt._
     import Args._
-    val args = Args(
+    val initialArgs = Args(
       "run-main CLASampleMain [options]", 
       "Demonstrates the CLA API.",
       """Note that --input and "others" are required.""",
@@ -165,36 +173,22 @@ Here is a slightly more concise way to write the content in `main2`:
         makeRemainingOpt(
                "others",                                                          "Other arguments", true)))
 
-    process(args, argstrings)
+    val finalArgs: Args = initialArgs.process(argstrings)
+    showResults(finalArgs)
   }
   ...
 ```
 
 This is more concise, but perhaps harder to follow.
 
-The `process` method uses the [Args](src/main/scala/com/concurrentthought/cla/Args.scala). It first parses the user-specified arguments, returning a new `Args` instance with updated values for each argument.
-
-```
-  protected def process(args: Args, argstrings: Array[String]): Unit = {
-    val parsedArgs = args.parse(argstrings)
-    ...
-```
-
-If errors occurred or help was requested, print the appropriate messages and exit.
-
-```
-    ...
-    if (parsedArgs.handleErrors()) sys.exit(1)
-    if (parsedArgs.handleHelp())   sys.exit(0)
-    ...
-```
+The [Args#process](src/main/scala/com/concurrentthought/cla/Args.scala) first calls `Args#parse` on the user-specified arguments, which returns a new `Args` instance with updated values for each argument. However, if an error occurs or help is requested, `process` automatically prints a message and exits. This behavior is configurable by overriding default arguments. See also `Args#parse()` for more flexible handling.
 
 You'll almost always want to include logic like this in your code that uses this library.
 
-Otherwise, if `--quiet` wasn't specified, then start printing information. First, print all the options and the current values for them, either the defaults or the user-specified values.
+If `--quiet` wasn't specified, then you might print information about the argument values. We demonstrate this in the `CLASampleMain` program. where the `showResults` method prints all the options and the current values for them, either the defaults or the user-specified values.
 
 ```
-    ...
+  protected def showResults(parsedArgs: Args): Unit = {
     if (parsedArgs.getOrElse("quiet", false)) {
       println("(... I'm being very quiet...)")
     } else {

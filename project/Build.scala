@@ -14,9 +14,9 @@ import sbtrelease.Utilities._
 object BuildSettings {
 
   val Name = "command-line-arguments"
-  val Version = "0.3.3"
+  val Version = "0.4.0"
   val ScalaVersion  = "2.11.7"
-  val CrossScalaVersions = Seq("2.10.5", "2.11.7")
+  val CrossScalaVersions = Seq("2.10.6", "2.11.7")
 
   val minScalacOptions = Vector("-deprecation", "-unchecked", "-feature",
     "-encoding", "utf8")
@@ -42,7 +42,11 @@ object BuildSettings {
         else scalac211Options
       },
       scalacOptions in (Compile, console) := minScalacOptions,
+
       fork in console  := true,
+      // Don't include the sample program in the `package` jar file.
+      // mappings in (Compile, packageBin) ~= { _.filter(!_._1.getName.contains("CLASampleMain")) },
+
       buildInfoPackage := Name,
       buildInfoKeys := Seq[BuildInfoKey](version, scalaVersion),
       buildInfoKeys ++= Seq[BuildInfoKey](

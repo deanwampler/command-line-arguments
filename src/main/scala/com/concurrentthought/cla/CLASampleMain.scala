@@ -17,7 +17,7 @@ package com.concurrentthought.cla
 object CLASampleMain {
 
   def main(argstrings: Array[String]) = {
-    val args: Args = """
+    val initialArgs: Args = """
       |run-main CLASampleMain [options]
       |Demonstrates the CLA API.
       |   -i | --in  | --input      string              Path to input file.
@@ -30,7 +30,10 @@ object CLASampleMain {
       |Note that --input and "others" are required.
       |""".stripMargin.toArgs
 
-    process(args, argstrings)
+    val finalArgs: Args = initialArgs.process(argstrings)
+
+    // If here, successfully parsed the args and none where "--help" or "-h".
+    showResults(finalArgs)
   }
 
   /** Functionally identical to `main`, but more verbose. */
@@ -62,13 +65,14 @@ object CLASampleMain {
       help     = "Other arguments",
       requiredFlag = true)
 
-    val args = Args(
+    val initialArgs = Args(
       "run-main CLASampleMain [options]", 
       "Demonstrates the CLA API.",
       """Note that --input and "others" are required.""",
       Seq(input, output, logLevel, path, things, Args.quietFlag, others)).parse(argstrings)
 
-    process(args, argstrings)
+    val finalArgs: Args = initialArgs.process(argstrings)
+    showResults(finalArgs)
   }
 
   /**
@@ -78,7 +82,7 @@ object CLASampleMain {
   def main3(argstrings: Array[String]) = {
     import Opt._
     import Args._
-    val args = Args(
+    val initialArgs = Args(
       "run-main CLASampleMain [options]", 
       "Demonstrates the CLA API.",
       """Note that --input and "others" are required.""",
@@ -93,18 +97,12 @@ object CLASampleMain {
         makeRemainingOpt(
                "others",                                                          "Other arguments", true)))
 
-    process(args, argstrings)
+    val finalArgs: Args = initialArgs.process(argstrings)
+    showResults(finalArgs)
   }
 
-  protected def process(args: Args, argstrings: Array[String]): Unit = {
-    // Use the Args object to parse the user-specified arguments.
-    val parsedArgs = args.parse(argstrings)
-
-    // If errors occurred or help was requested, print the appropriate messages
-    // and exit.
-    if (parsedArgs.handleErrors()) sys.exit(1)
-    if (parsedArgs.handleHelp())   sys.exit(0)
-
+  protected def showResults(parsedArgs: Args): Unit = {
+    
     // Was quiet specified? If not, then write some stuff...
     if (parsedArgs.getOrElse("quiet", false)) {
       println("(... I'm being very quiet...)")

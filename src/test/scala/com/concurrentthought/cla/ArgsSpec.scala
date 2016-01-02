@@ -1,6 +1,7 @@
 package com.concurrentthought.cla
 import scala.util.{Try, Success, Failure}
 import org.scalatest.FunSpec
+import java.io._
 
 class ArgsSpec extends FunSpec {
   import SpecHelper._
@@ -215,6 +216,41 @@ class ArgsSpec extends FunSpec {
           assert(args2.remaining === Vector.empty[String])
           assert(args2.failures === Seq((flag, Args.UnrecognizedArgument(flag, Nil))))
         }
+      }
+    }
+
+    describe ("process())") {
+
+      val unexpectedExit: Int => Unit = (n) => fail(s"Unexpected exit($n)")
+      def expectedExit(expected: Int): Int => Unit = 
+        (n) => assert(expected === n, s"Unexpected exit($n)")
+      
+      it ("when successful, returns an Args with the updated Args") {
+        val bytes = new ByteArrayOutputStream(2048)
+        val out2 = new PrintStream(bytes, true)
+        val args = Args(opts = allOpts).process(
+          Array("--string", "hello"), out2, unexpectedExit)
+        val values = allDefaults + ("string" -> "hello")
+        assert(args.values === values)
+        assert(args.remaining.size === 0)
+        assert(args.failures.size === 0)
+        assert(bytes.size === 0)
+      }
+
+      it ("when successful, but help requested returns a None and outputs the help") {
+        val bytes = new ByteArrayOutputStream(2048)
+        val out2 = new PrintStream(bytes, true)
+        val args = Args(opts = allOpts).process(
+          Array("--help", "--string", "hello"), out2, expectedExit(0))
+        assert(bytes.size !== 0)
+      }
+
+      it ("when unsuccessful, returns a None and outputs an error message") {
+        val bytes = new ByteArrayOutputStream(2048)
+        val out2 = new PrintStream(bytes, true)
+        val args = Args(opts = allOpts).process(
+          Array("--bogus", "--string", "hello"), out2, expectedExit(1))
+        assert(bytes.size !== 0)
       }
     }
 
