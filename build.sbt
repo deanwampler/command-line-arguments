@@ -23,22 +23,21 @@ import GitKeys._
 // See https://github.com/xerial/sbt-sonatype
 // sonatypeSettings
 
+lazy val scalaVersionString = "2.11.7"
+
 lazy val buildSettings = Seq(
   organization       := "com.concurrentthought.cla",
   name               := "command-line-arguments",
   description        := "A library for handling command-line arguments.",
   version            := "0.4.0",
 
-  scalaVersion       := "2.11.7",
+  scalaVersion       := scalaVersionString,
   crossScalaVersions := Seq("2.10.6", "2.11.7"),
 
   maxErrors          := 5,
   triggeredMessage   := Watched.clearWhenTriggered,
 
-  scalacOptions in Compile <<= scalaVersion map { v: String =>
-    if (v.startsWith("2.10.")) scalac210Options
-    else scalac211Options
-  },
+  scalacOptions in Compile            := commonScalacOptions,
   scalacOptions in (Compile, console) := minScalacOptions,
 
   fork in console  := true,
@@ -49,17 +48,17 @@ lazy val buildSettings = Seq(
     "org.scalacheck" %% "scalacheck"      % "1.12.5" % "test"
     ),
 
-    buildInfoPackage := name.value,
-    buildInfoKeys := Seq[BuildInfoKey](version, scalaVersion),
-    buildInfoKeys ++= Seq[BuildInfoKey](
-      version,
-      scalaVersion,
-      gitHeadCommit,
-      BuildInfoKey.action("buildTime") {
-        System.currentTimeMillis
-      }
-    )
-)
+  buildInfoPackage := name.value,
+  buildInfoKeys := Seq[BuildInfoKey](version, scalaVersion),
+  buildInfoKeys ++= Seq[BuildInfoKey](
+    version,
+    scalaVersion,
+    gitHeadCommit,
+    BuildInfoKey.action("buildTime") {
+      System.currentTimeMillis
+    }
+  )
+) ++ extraWarnings
 
 
 lazy val minScalacOptions = Vector(
@@ -78,11 +77,18 @@ lazy val commonScalacOptions = minScalacOptions ++ Vector(
   "-Ywarn-numeric-widen",
   "-Ywarn-value-discard")
 
-lazy val scalac210Options = commonScalacOptions
-lazy val scalac211Options = commonScalacOptions ++ Vector(
-  "-Ywarn-infer-any",
-  "-Ywarn-unused-import")
-
+lazy val extraWarnings = Seq(
+  scalacOptions ++= {
+    CrossVersion.partialVersion(scalaVersion.value) match {
+      case Some((2, 10)) =>
+        Seq()
+      case Some((2, n)) if n >= 11 =>
+        Seq("-Ywarn-infer-any", "-Ywarn-unused-import")
+    }
+  },
+  scalacOptions in (Compile, console) ~= {_.filterNot("-Ywarn-unused-import" == _)},
+  scalacOptions in (Test, console) <<= (scalacOptions in (Compile, console))
+)
 
 lazy val sharedPublishSettings = Seq(
   releaseCrossBuild := true,
@@ -115,15 +121,12 @@ lazy val sharedReleaseProcess = Seq(
     pushChanges)
 )
 
-// `credentials` is a `Credentials` instance defined in my private
-// ~/.sbt/0.13/sonatype.sbt file. E.g.,
-//   credentials += Credentials("Sonatype Nexus Repository Manager",
-//     "oss.sonatype.org", name, password)
-
 lazy val publishSettings = Seq(
   homepage := Some(url("https://github.com/deanwampler/command-line-arguments")),
   licenses := Seq("Apache 2" -> url("http://www.apache.org/licenses/LICENSE-2.0")),
-  scmInfo := Some(ScmInfo(url("https://github.com/deanwampler/command-line-arguments"), "scm:git:git@github.com:deanwampler/command-line-arguments.git")),
+  scmInfo := Some(ScmInfo(
+    url("https://github.com/deanwampler/command-line-arguments"), 
+    "scm:git:git@github.com:deanwampler/command-line-arguments.git")),
   autoAPIMappings := true,
   apiURL := Some(url("https://non.github.io/deanwampler/command-line-arguments/api/")),
   pomExtra := (
@@ -134,8 +137,9 @@ lazy val publishSettings = Seq(
         <url>http://concurrentthought.com</url>
       </developer>
     </developers>
-  )
-) ++ Seq(credentials) ++ sharedPublishSettings ++ sharedReleaseProcess 
+  ),
+  credentials += Credentials(Path.userHome / ".ivy2" / ".credentials")
+) ++ sharedPublishSettings ++ sharedReleaseProcess 
 
 lazy val noPublishSettings = Seq(
   publish := (),
@@ -146,18 +150,17 @@ lazy val noPublishSettings = Seq(
 
 lazy val cla = project.in(file("."))
   .settings(moduleName := "root")
-  .settings(buildSettings:_*)
-  .settings(noPublishSettings)
+  .settings(buildSettings ++ noPublishSettings)
   .aggregate(core, examples)
   .dependsOn(core, examples)
 
 lazy val core = project.in(file("core"))
   .settings(moduleName := "command-line-arguments")
-  .settings(buildSettings:_*)
+  .settings(buildSettings ++ publishSettings)
 
 lazy val examples = project.in(file("examples"))
   .settings(moduleName := "command-line-arguments-examples")
-  .settings(buildSettings:_*)
+  .settings(buildSettings ++ publishSettings)
   .dependsOn(core)
 
 
