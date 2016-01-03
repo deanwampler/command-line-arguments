@@ -135,17 +135,20 @@ lazy val noPublishSettings = Seq(
 
 lazy val cla = project.in(file("."))
   .settings(moduleName := "root")
-  .settings(buildSettings ++ noPublishSettings)
+  .settings(buildSettings)
+  .settings(noPublishSettings)
   .aggregate(core, examples)
   .dependsOn(core, examples)
 
 lazy val core = project.in(file("core"))
   .settings(moduleName := "command-line-arguments")
-  .settings(buildSettings ++ publishSettings)
+  .settings(buildSettings)
+  .settings(publishSettings)
 
 lazy val examples = project.in(file("examples"))
   .settings(moduleName := "command-line-arguments-examples")
-  .settings(buildSettings ++ publishSettings)
+  .settings(buildSettings)
+  .settings(publishSettings)
   .dependsOn(core)
 
 
