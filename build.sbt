@@ -4,24 +4,9 @@ import com.typesafe.sbt.SbtSite.SiteKeys._
 import com.typesafe.sbt.SbtGhPages.GhPagesKeys._
 import sbtunidoc.Plugin.UnidocKeys._
 import ReleaseTransformations._
-// import sbt._
-// import sbt.Keys._
 
 import com.typesafe.sbt.SbtGit._
 import GitKeys._
-// import SiteKeys._
-// import sbtbuildinfo.Plugin._
-
-// import sbtrelease._
-// import sbtrelease.ReleasePlugin._
-// import sbtrelease.ReleasePlugin.ReleaseKeys._
-// import sbtrelease.ReleaseStateTransformations._
-// import sbtrelease.Utilities._
-
-// import SonatypeKeys._
-
-// See https://github.com/xerial/sbt-sonatype
-// sonatypeSettings
 
 lazy val scalaVersionString = "2.11.7"
 
