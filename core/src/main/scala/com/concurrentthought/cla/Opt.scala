@@ -38,7 +38,7 @@ case class Opt[V] (
     case sv @ Success(v)  => ((name, sv), tail)
     case Failure(ex) => ex match {
       case ivs: Opt.InvalidValueString => ((name, Failure(ivs)), tail)
-      case ex => ((name, Failure(Opt.InvalidValueString(flag, value, Some(ex)))), tail)
+      case ex: Any => ((name, Failure(Opt.InvalidValueString(flag, value, Some(ex)))), tail)
     }
   }
 }
@@ -69,10 +69,10 @@ object Opt {
   case class InvalidValueString(
     flag: String, valueMessage: String, cause: Option[Throwable] = None)
     extends RuntimeException(s"$valueMessage for option $flag",
-      if (cause == None) null else cause.get) {
+      if (cause == None) null else cause.get) { // scalastyle:ignore
 
       /** Override toString to show a nicer name for the exception than the FQN. */
-      override def toString = {
+      override def toString: String = {
         val causeStr = if (cause == None) "" else s" (cause: ${cause.get})"
         "Invalid value string: " + getMessage + causeStr
       }
@@ -109,7 +109,7 @@ object Opt {
     name:         String,
     flags:        Seq[String],
     help:         String = "",
-    requiredFlag: Boolean = false) = 
+    requiredFlag: Boolean = false): Flag = 
       new Flag(name, flags, false, help, requiredFlag)
 
   /** 
@@ -120,7 +120,7 @@ object Opt {
     name:         String,
     flags:        Seq[String],
     help:         String = "",
-    requiredFlag: Boolean = false) = 
+    requiredFlag: Boolean = false): Flag = 
       new Flag(name, flags, true, help, requiredFlag)
 
   /** Create a String option */
@@ -129,7 +129,7 @@ object Opt {
     flags:        Seq[String],
     default:      Option[String] = None,
     help:         String = "",
-    requiredFlag: Boolean = false) =
+    requiredFlag: Boolean = false): Opt[String] =
       apply(name, flags, default, help, requiredFlag)(toTry(identity))
 
   /** Create a Byte option. */
@@ -138,7 +138,7 @@ object Opt {
     flags:        Seq[String],
     default:      Option[Byte] = None,
     help:         String = "",
-    requiredFlag: Boolean = false) =
+    requiredFlag: Boolean = false): Opt[Byte] =
       apply(name, flags, default, help, requiredFlag)(toTry(_.toByte))
 
   /** Create a Char option. Just takes the first character in the value string. */
@@ -147,7 +147,7 @@ object Opt {
     flags:        Seq[String],
     default:      Option[Char] = None,
     help:         String = "",
-    requiredFlag: Boolean = false) =
+    requiredFlag: Boolean = false): Opt[Char] =
       apply(name, flags, default, help, requiredFlag)(toTry(_(0)))
 
   /** Create an Int option. */
@@ -156,7 +156,7 @@ object Opt {
     flags:        Seq[String],
     default:      Option[Int] = None,
     help:         String = "",
-    requiredFlag: Boolean = false) =
+    requiredFlag: Boolean = false): Opt[Int] =
       apply(name, flags, default, help, requiredFlag)(toTry(_.toInt))
 
   /** Create a Long option. */
@@ -165,7 +165,7 @@ object Opt {
     flags:        Seq[String],
     default:      Option[Long] = None,
     help:         String = "",
-    requiredFlag: Boolean = false) =
+    requiredFlag: Boolean = false): Opt[Long] =
       apply(name, flags, default, help, requiredFlag)(toTry(_.toLong))
 
   /** Create a Float option. */
@@ -174,7 +174,7 @@ object Opt {
     flags:        Seq[String],
     default:      Option[Float] = None,
     help:         String = "",
-    requiredFlag: Boolean = false) =
+    requiredFlag: Boolean = false): Opt[Float] =
       apply(name, flags, default, help, requiredFlag)(toTry(_.toFloat))
 
   /** Create a Double option. */
@@ -183,7 +183,7 @@ object Opt {
     flags:        Seq[String],
     default:      Option[Double] = None,
     help:         String = "",
-    requiredFlag: Boolean = false) =
+    requiredFlag: Boolean = false): Opt[Double] =
       apply(name, flags, default, help, requiredFlag)(toTry(_.toDouble))
 
   /**
@@ -196,12 +196,12 @@ object Opt {
    * that the list of common Opt arguments is consistent with the other helper
    * methods.
    */
-  def seq[V](delimsRE:  String)(
+  def seq[V](delimsRE: String)(
     name:         String,
     flags:        Seq[String],
     default:      Option[Seq[V]] = None,
     help:         String = "",
-    requiredFlag: Boolean = false)(fromString: String => Try[V]) = {
+    requiredFlag: Boolean = false)(fromString: String => Try[V]): Opt[Seq[V]] = {
       require (delimsRE.trim.length > 0, "The delimiters RE string can't be empty.")
       apply(name, flags, default, help, requiredFlag) {
         s => seqSupport(name, s, delimsRE, fromString)
@@ -211,12 +211,12 @@ object Opt {
   /**
    * A helper method when the substrings are returned without further processing required.
    */
-  def seqString(delimsRE:  String)(
+  def seqString(delimsRE: String)(
     name:         String,
     flags:        Seq[String],
     default:      Option[Seq[String]] = None,
     help:         String = "",
-    requiredFlag: Boolean = false) =
+    requiredFlag: Boolean = false): Opt[Seq[String]] =
       seq[String](delimsRE)(name, flags, default, help, requiredFlag)(toTry(_.toString))
 
   /**
@@ -228,7 +228,7 @@ object Opt {
     flags:        Seq[String],
     default:      Option[Seq[String]] = None,
     help:         String = "List of file system paths",
-    requiredFlag: Boolean = false) =
+    requiredFlag: Boolean = false): Opt[Seq[String]] =
       seqString(pathSeparator)(
         name, flags, default, help, requiredFlag)
 

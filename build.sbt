@@ -4,9 +4,7 @@ import com.typesafe.sbt.SbtSite.SiteKeys._
 import com.typesafe.sbt.SbtGhPages.GhPagesKeys._
 import sbtunidoc.Plugin.UnidocKeys._
 import ReleaseTransformations._
-
-import com.typesafe.sbt.SbtGit._
-import GitKeys._
+import ScoverageSbtPlugin._
 
 lazy val scalaVersionString = "2.11.7"
 
@@ -31,28 +29,23 @@ lazy val buildSettings = Seq(
     "org.parboiled"  %% "parboiled-scala" % "1.1.7",
     "org.scalatest"  %% "scalatest"       % "2.2.4"  % "test",
     "org.scalacheck" %% "scalacheck"      % "1.12.5" % "test"
-    ),
-
-  buildInfoPackage := name.value,
-  buildInfoKeys := Seq[BuildInfoKey](version, scalaVersion),
-  buildInfoKeys ++= Seq[BuildInfoKey](
-    version,
-    scalaVersion,
-    gitHeadCommit,
-    BuildInfoKey.action("buildTime") {
-      System.currentTimeMillis
-    }
   )
 ) ++ extraWarnings
 
+lazy val scoverageSettings = Seq(
+  ScoverageKeys.coverageMinimum := 60,
+  ScoverageKeys.coverageFailOnMinimum := false,
+  ScoverageKeys.coverageHighlighting := scalaBinaryVersion.value != "2.10",
+  ScoverageKeys.coverageExcludedPackages := "com\\.concurrentthought\\.cla\\.examples\\..*"
+)
 
-lazy val minScalacOptions = Vector(
+lazy val minScalacOptions = Seq(
   "-deprecation", 
   "-unchecked", 
   "-feature",
   "-encoding", "utf8")
 
-lazy val commonScalacOptions = minScalacOptions ++ Vector(
+lazy val commonScalacOptions = minScalacOptions ++ Seq(
   "-Xfatal-warnings",
   "-Xlint",
   "-Xfuture",
@@ -135,22 +128,23 @@ lazy val noPublishSettings = Seq(
 
 lazy val cla = project.in(file("."))
   .settings(moduleName := "root")
-  .settings(buildSettings)
+  .settings(buildSettings ++ scoverageSettings)
   .settings(noPublishSettings)
   .aggregate(core, examples)
   .dependsOn(core, examples)
 
 lazy val core = project.in(file("core"))
   .settings(moduleName := "command-line-arguments")
-  .settings(buildSettings)
+  .settings(buildSettings ++ scoverageSettings)
   .settings(publishSettings)
 
 lazy val examples = project.in(file("examples"))
   .settings(moduleName := "command-line-arguments-examples")
-  .settings(buildSettings)
+  .settings(buildSettings ++ scoverageSettings)
   .settings(publishSettings)
   .dependsOn(core)
 
+addCommandAlias("validate", ";scalastyle;test")
 
 initialCommands += """
   import com.concurrentthought.cla._

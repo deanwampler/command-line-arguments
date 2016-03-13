@@ -66,7 +66,7 @@ case class Args protected (
   def parse(args: Seq[String]): Args = {
     def p(args2: Seq[String]): Seq[(String, Any)] = args2 match {
       case Nil => Nil
-      case seq => try {
+      case seq: Any => try {
         parserChain(seq) match {
           case ((flag, Success(value)), tail) => (flag, value) +: p(tail)
           case ((flag, Failure(failure)), tail) => (flag, failure) +: p(tail)
@@ -227,7 +227,7 @@ case class Args protected (
     case unknownOptionRE(flag) +: tail => throw Args.UnrecognizedArgument(flag, tail)
   }
 
-  override def toString = s"""Args:
+  override def toString: String = s"""Args:
   |  program invocation: $programInvocation
   |    leading comments: $leadingComments
   |   trailing comments: $trailingComments
@@ -296,7 +296,7 @@ object Args {
     var defaults1 = defaults
     var values1 = values
     var remaining1 = Vector.empty[String]
-    if (opts1.exists(_.name == HELP_KEY) == false) {
+    if (opts1.exists(_.name == HELP_KEY) == false) { // scalastyle:ignore
       opts1 = helpFlag +: opts1
       val hf = (HELP_KEY -> false)
       defaults1 = defaults1 + hf
@@ -312,10 +312,9 @@ object Args {
       remaining1  = noFlagOpts.head.default match {
         case Some(s) => s match {
           case s: Seq[_] => s.map(_.toString).toVector // _ should already be String, but erasure...
-          case x => Vector(x.toString)
+          case x: Any => Vector(x.toString)
         }
         case None => Vector.empty[String]
-        case x => throw new RuntimeException(s"$x in $noFlagOpts")
       }
     }
     val allValues1 = values1.map{ case (k,v) => (k,Vector(v)) }
@@ -345,7 +344,7 @@ object Args {
   def makeRemainingOpt(
     name: String = REMAINING_KEY,
     help: String = "All remaining arguments that aren't associated with flags.",
-    requiredFlag: Boolean = false) =
+    requiredFlag: Boolean = false): Opt[String] =
       new Opt[String](name = name, flags = Nil, help = help, requiredFlag = requiredFlag)(s => Try(s)) {
 
         /** Now there are no flags expected as the first token. */
@@ -358,7 +357,7 @@ object Args {
 
   /** Socket host and port. */
   def socketOpt(default: Option[(String, Int)] = None, 
-      required: Boolean = false) = Opt[(String,Int)](
+      required: Boolean = false): Opt[(String,Int)] = Opt[(String,Int)](
     name    = "socket",
     flags   = Seq("-s", "--socket"),
     default = default,
@@ -378,7 +377,7 @@ object Args {
   case class MissingRequiredArgument[T](o: Opt[T])
     extends RuntimeException("") {
 
-    override def toString = 
+    override def toString: String = 
       s"""Missing required argument: "${o.name}"${flagsString} ${o.help}"""
 
     protected def flagsString = 
@@ -388,7 +387,7 @@ object Args {
 
   case class UnrecognizedArgument(arg: String, rest: Seq[String])
     extends RuntimeException("") {
-      override def toString =
+      override def toString: String =
         s"Unrecognized argument (or missing value): $arg ${restOfArgs(rest)}"
 
       private def restOfArgs(rest: Seq[String]) =

@@ -1,10 +1,11 @@
-package com.concurrentthought.cla
+package com.concurrentthought.cla.examples
+import com.concurrentthought.cla._
 
 /**
  * Demonstrates how to use the API. Try running with different arguments,
  * including `--help`. Try running the following examples within SBT:
  * {{{
- * run-main com.concurrentthought.cla.CLASampleMain -h
+ * run-main com.concurrentthought.cla.examples.CLASampleMain -h
  * run -h
  * run --help
  * run -i /in -o /out -l 4 -p a:b --things x-y|z foo bar baz

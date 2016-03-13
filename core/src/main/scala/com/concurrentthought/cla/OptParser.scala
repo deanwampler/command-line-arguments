@@ -1,5 +1,5 @@
 package com.concurrentthought.cla
-import org.parboiled.scala._
+import org.parboiled.scala._  // scalastyle:ignore
 import org.parboiled.errors.{ErrorUtils, ParsingException}
 import scala.language.existentials
 
@@ -55,6 +55,7 @@ object Elems {
   }
 }
 
+// scalastyle:off
 
 /** Parse a line defining an option. */
 object OptParser extends Parser {
@@ -147,3 +148,5 @@ object OptParser extends Parser {
       case pe: ParsingException => Left(pe)
     }
 }
+
+// scalastyle:on

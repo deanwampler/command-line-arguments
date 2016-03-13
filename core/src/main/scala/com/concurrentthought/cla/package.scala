@@ -74,7 +74,7 @@ package object cla {
    */
   implicit class ToArgs(str: String) {
 
-    import Elems._
+    import Elems._  // scalastyle:ignore
 
     def toArgs: Args = {
       val lines = str.split("\n").filter(_.length != 0).toVector
@@ -111,11 +111,12 @@ package object cla {
       val (programInvocation, description) = leading.size match {
         case 0 => ("", "")
         case 1 => (leading(0), "")
-        case n => (leading(0), leading.slice(1, n).mkString(" "))
+        case n:Int => (leading(0), leading.slice(1, n).mkString(" "))
       }
       Args(programInvocation, description, trailing.mkString(" "), opts.toVector)
     }
 
+    // scalastyle:off
     protected def toOpt(typeElem: TypeElem[_],
       name: String, optional: Boolean, 
       flags: Seq[String], help: String): Opt[_] = typeElem match {
@@ -134,6 +135,7 @@ package object cla {
                                            name, flags, toInitSeq(e.initialValue, e.delimiter), help, !optional)(s => Try(s.toString))
       case e: PathTypeElem   => Opt.path(  name, flags, toInitSeq(e.initialValue, Opt.pathSeparator), help, !optional)
     }
+    // scalastyle:on
 
     protected def toBool(o: Option[Boolean]): Boolean = o.getOrElse(false)
 
@@ -143,7 +145,7 @@ package object cla {
 }
 
 package cla {
-  case class ParseError(msg: String, cause: Throwable = null)
+  case class ParseError(msg: String, cause: Throwable = null) // scalastyle:ignore
     extends RuntimeException(msg, cause)
 }
 

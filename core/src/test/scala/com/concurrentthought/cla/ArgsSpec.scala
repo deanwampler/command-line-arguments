@@ -312,6 +312,44 @@ class ArgsSpec extends FunSpec {
       }
     }
 
+    describe ("toString") {
+      val args = Args(
+        programInvocation = "java foo",
+        leadingComments   = "leading",
+        trailingComments  = "trailing",
+        opts              = allOpts)
+
+      val tos = args.toString
+      
+      it ("contains the program invocation") {
+        assert(tos.contains("program invocation: java foo"))
+      }
+      it ("contains the leading comments") {
+        assert(tos.contains("leading comments: leading"))
+      }
+      it ("contains the trailing comments") {
+        assert(tos.contains("trailing comments: trailing"))
+      }
+      it ("contains the options") {
+        assert(tos.contains(s"opts: $allOpts"))
+      }
+      it ("contains the defaults") {
+        assert(tos.contains(s"defaults: ${args.defaults}"))
+      }
+      it ("contains the values") {
+        assert(tos.contains(s"values: ${args.values}"))
+      }
+      it ("contains all values") {
+        assert(tos.contains(s"allValues: ${args.allValues}"))
+      }
+      it ("contains the remaining tokens") {
+        assert(tos.contains(s"remaining: ${args.remaining}"))
+      }
+      it ("contains the failures") {
+        assert(tos.contains(s"failures: ${args.failures}"))
+      }
+    }
+
     describe ("printValues") {
       it ("prints the default values before any parsing is done") {
         val args = Args(opts = allOpts)
@@ -538,75 +576,83 @@ class ArgsSpec extends FunSpec {
   }
 
 
-    describe ("helpFlag") {
-      it ("defines a help option") {
-        assert(Args.helpFlag.name    === Args.HELP_KEY)
-        assert(Args.helpFlag.default === Some(false))
-      }
-      it ("doesn't consume a value") {
-        val result = Args.helpFlag.parser(Seq("--help", "one", "two"))
-        assert((Args.HELP_KEY, Success(true)) === result._1)
-        assert(Seq("one", "two") === result._2)
-      }
+  describe ("helpFlag") {
+    it ("defines a help option") {
+      assert(Args.helpFlag.name    === Args.HELP_KEY)
+      assert(Args.helpFlag.default === Some(false))
+    }
+    it ("doesn't consume a value") {
+      val result = Args.helpFlag.parser(Seq("--help", "one", "two"))
+      assert((Args.HELP_KEY, Success(true)) === result._1)
+      assert(Seq("one", "two") === result._2)
+    }
+  }
+
+  describe ("quietFlag") {
+    it ("defines a quiet option") {
+      assert(Args.quietFlag.default === Some(false))
+    }
+    it ("doesn't consume a value") {
+      val result = Args.quietFlag.parser(Seq("--quiet", "one", "two"))
+      assert(("quiet", Success(true)) === result._1)
+      assert(Seq("one", "two") === result._2)
+    }
+  }
+
+  describe ("remainingOpt") {
+    it ("defines a 'remaining' option for the command-line tokens not associated with flags") {
+      assert(Args.remainingOpt.name    === Args.REMAINING_KEY)
+      assert(Args.remainingOpt.flags   === Nil)
+      assert(Args.remainingOpt.default === None)
+    }
+  }
+
+  describe ("socketOpt") {
+    it ("defines a socket (host:port) option") {
+      assert(Args.socketOpt().default === None)
+    }
+    it ("can be made required") {
+      assert(Args.socketOpt(required = true).required === true)
     }
 
-    describe ("quietFlag") {
-      it ("defines a quiet option") {
-        assert(Args.quietFlag.default === Some(false))
+    describe ("""requires a string of the form "host:port" option""") {
+      it ("can be provided a default value") {
+        assert(Args.socketOpt(default = Some(("host",123))).default === Some(("host",123)))
       }
-      it ("doesn't consume a value") {
-        val result = Args.quietFlag.parser(Seq("--quiet", "one", "two"))
-        assert(("quiet", Success(true)) === result._1)
-        assert(Seq("one", "two") === result._2)
+      it ("succeeds if the host is a name or IP address and the port is an integer") {
+        val expected = (("socket", Try(("host", 123))), Nil)
+        assert(Args.socketOpt().parser(Seq("--socket", "host:123")) === expected)
       }
-    }
-
-    describe ("remainingOpt") {
-      it ("defines a 'remaining' option for the command-line tokens not associated with flags") {
-        assert(Args.remainingOpt.name    === Args.REMAINING_KEY)
-        assert(Args.remainingOpt.flags   === Nil)
-        assert(Args.remainingOpt.default === None)
+      it ("returns a Failure(Opt.InvalidValueString) if the :port is missing") {
+        Args.socketOpt().parser(Seq("--socket", "host"))
+        val result = Args.socketOpt().parser(Seq("--socket", "host", "--bar"))
+        val r1 = ("socket", Failure(Opt.InvalidValueString("--socket", "host", None)))
+        val r2 = Seq("--bar")
+        assert((r1, r2) === result)
       }
-    }
-
-    describe ("socketOpt") {
-      it ("defines a socket (host:port) option") {
-        assert(Args.socketOpt().default === None)
+      it ("returns a Failure(Opt.InvalidValueString) if the host: is missing") {
+        val result = Args.socketOpt().parser(Seq("--socket", "123", "--bar"))
+        val r1 = ("socket", Failure(Opt.InvalidValueString("--socket", "123", None)))
+        val r2 = Seq("--bar")
+        assert((r1, r2) === result)
       }
-      it ("can be made required") {
-        assert(Args.socketOpt(required = true).required === true)
-      }
-
-      describe ("""requires a string of the form "host:port" option""") {
-        it ("can be provided a default value") {
-          assert(Args.socketOpt(default = Some(("host",123))).default === Some(("host",123)))
-        }
-        it ("succeeds if the host is a name or IP address and the port is an integer") {
-          val expected = (("socket", Try(("host", 123))), Nil)
-          assert(Args.socketOpt().parser(Seq("--socket", "host:123")) === expected)
-        }
-        it ("returns a Failure(Opt.InvalidValueString) if the :port is missing") {
-          Args.socketOpt().parser(Seq("--socket", "host"))
-          val result = Args.socketOpt().parser(Seq("--socket", "host", "--bar"))
-          val r1 = ("socket", Failure(Opt.InvalidValueString("--socket", "host", None)))
-          val r2 = Seq("--bar")
-          assert((r1, r2) === result)
-        }
-        it ("returns a Failure(Opt.InvalidValueString) if the host: is missing") {
-          val result = Args.socketOpt().parser(Seq("--socket", "123", "--bar"))
-          val r1 = ("socket", Failure(Opt.InvalidValueString("--socket", "123", None)))
-          val r2 = Seq("--bar")
-          assert((r1, r2) === result)
-        }
-        it ("returns a Failure(Opt.InvalidValueString) if the port is not an integer") {
-          Args.socketOpt().parser(Seq("--socket", "host:foo", "--bar")) match {
-            case (("socket", Failure(failure)), Seq("--bar")) => failure match {
-              case Opt.InvalidValueString("--socket", "host:foo (not an int?)", Some(th)) => /* pass */
-              case _ => fail("Unexpected exception: "+failure)
-            }
-            case badResult => fail(badResult.toString)
+      it ("returns a Failure(Opt.InvalidValueString) if the port is not an integer") {
+        Args.socketOpt().parser(Seq("--socket", "host:foo", "--bar")) match {
+          case (("socket", Failure(failure)), Seq("--bar")) => failure match {
+            case Opt.InvalidValueString("--socket", "host:foo (not an int?)", Some(th)) => /* pass */
+            case _ => fail("Unexpected exception: "+failure)
           }
+          case badResult => fail(badResult.toString)
         }
       }
     }
   }
+
+  describe ("MissingRequiredArgument") {
+    it ("handles required arguments that weren't provided") {
+      val mra = Args.MissingRequiredArgument(SpecHelper.longOpt)
+      assert(mra.toString.contains(
+        """Missing required argument: "long" with flags -l | --l | --long, long help message"""))
+    }
+  }
+}
