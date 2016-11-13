@@ -6,7 +6,7 @@ import sbtunidoc.Plugin.UnidocKeys._
 import ReleaseTransformations._
 import ScoverageSbtPlugin._
 
-lazy val scalaVersionString = "2.11.7"
+lazy val scalaVersionString = "2.11.8"
 
 lazy val buildSettings = Seq(
   organization       := "com.concurrentthought.cla",
@@ -15,7 +15,7 @@ lazy val buildSettings = Seq(
   version            := "0.4.0",
 
   scalaVersion       := scalaVersionString,
-  crossScalaVersions := Seq("2.10.6", "2.11.7"),
+  crossScalaVersions := Seq("2.10.6", "2.11.8"),
 
   maxErrors          := 5,
   triggeredMessage   := Watched.clearWhenTriggered,
@@ -40,8 +40,8 @@ lazy val scoverageSettings = Seq(
 )
 
 lazy val minScalacOptions = Seq(
-  "-deprecation", 
-  "-unchecked", 
+  "-deprecation",
+  "-unchecked",
   "-feature",
   "-encoding", "utf8")
 
@@ -82,7 +82,7 @@ lazy val sharedPublishSettings = Seq(
       Some("Releases" at nexus + "service/local/staging/deploy/maven2")
   }
 )
- 
+
 lazy val sharedReleaseProcess = Seq(
   releaseProcess := Seq[ReleaseStep](
     checkSnapshotDependencies,
@@ -103,7 +103,7 @@ lazy val publishSettings = Seq(
   homepage := Some(url("https://github.com/deanwampler/command-line-arguments")),
   licenses := Seq("Apache 2" -> url("http://www.apache.org/licenses/LICENSE-2.0")),
   scmInfo := Some(ScmInfo(
-    url("https://github.com/deanwampler/command-line-arguments"), 
+    url("https://github.com/deanwampler/command-line-arguments"),
     "scm:git:git@github.com:deanwampler/command-line-arguments.git")),
   autoAPIMappings := true,
   apiURL := Some(url("https://non.github.io/deanwampler/command-line-arguments/api/")),
@@ -117,7 +117,7 @@ lazy val publishSettings = Seq(
     </developers>
   ),
   credentials += Credentials(Path.userHome / ".ivy2" / ".credentials")
-) ++ sharedPublishSettings ++ sharedReleaseProcess 
+) ++ sharedPublishSettings ++ sharedReleaseProcess
 
 lazy val noPublishSettings = Seq(
   publish := (),
@@ -126,11 +126,11 @@ lazy val noPublishSettings = Seq(
 )
 
 
-lazy val cla = project.in(file("."))
+lazy val root = project.in(file("."))
   .settings(moduleName := "root")
   .settings(buildSettings ++ scoverageSettings)
   .settings(noPublishSettings)
-  .aggregate(core, examples)
+  .aggregate(core, examples, dist)
   .dependsOn(core, examples)
 
 lazy val core = project.in(file("core"))
@@ -143,6 +143,17 @@ lazy val examples = project.in(file("examples"))
   .settings(buildSettings ++ scoverageSettings)
   .settings(publishSettings)
   .dependsOn(core)
+
+// Used for exporting the repo only.
+lazy val dist = project.in(file("dist"))
+  .enablePlugins(ExportRepoPlugin)
+  .dependsOn(core, examples)
+  .settings(
+    name := "dist",
+    // add external libs here, if you want
+    // libraryDependencies += "org.typelevel" %% "cats" % "0.6.0",
+    publish := (),
+    publishLocal := ())
 
 addCommandAlias("validate", ";scalastyle;test")
 
