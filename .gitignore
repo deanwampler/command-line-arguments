@@ -13,3 +13,5 @@ tmp
 /project/*-shim.sbt
 *.class
 .DS_Store
+notes.md
+
