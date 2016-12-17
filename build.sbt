@@ -65,11 +65,12 @@ lazy val extraWarnings = Seq(
     }
   },
   scalacOptions in (Compile, console) ~= {_.filterNot("-Ywarn-unused-import" == _)},
-  scalacOptions in (Test, console) <<= (scalacOptions in (Compile, console))
+  scalacOptions in (Test, console) ~= {_.filterNot("-Ywarn-unused-import" == _)}
 )
 
 lazy val sharedPublishSettings = Seq(
   releaseCrossBuild := true,
+  releaseTagName := version.value,
   releasePublishArtifactsAction := PgpKeys.publishSigned.value,
   publishMavenStyle := true,
   publishArtifact in Test := false,
@@ -101,12 +102,12 @@ lazy val sharedReleaseProcess = Seq(
 
 lazy val publishSettings = Seq(
   homepage := Some(url("https://github.com/deanwampler/command-line-arguments")),
-  licenses := Seq("Apache 2" -> url("http://www.apache.org/licenses/LICENSE-2.0")),
+  licenses := Seq("Apache-2.0" -> url("http://www.apache.org/licenses/LICENSE-2.0")),
   scmInfo := Some(ScmInfo(
     url("https://github.com/deanwampler/command-line-arguments"),
     "scm:git:git@github.com:deanwampler/command-line-arguments.git")),
+  // apiURL := Some(url("...")) // TODO
   autoAPIMappings := true,
-  apiURL := Some(url("https://non.github.io/deanwampler/command-line-arguments/api/")),
   pomExtra := (
     <developers>
       <developer>
@@ -116,7 +117,7 @@ lazy val publishSettings = Seq(
       </developer>
     </developers>
   ),
-  credentials += Credentials(Path.userHome / ".ivy2" / ".credentials")
+  credentials += Credentials(Path.userHome / ".sonatype" / ".credentials")
 ) ++ sharedPublishSettings ++ sharedReleaseProcess
 
 lazy val noPublishSettings = Seq(
