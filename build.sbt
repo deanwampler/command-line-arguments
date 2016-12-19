@@ -6,16 +6,19 @@ import sbtunidoc.Plugin.UnidocKeys._
 import ReleaseTransformations._
 import ScoverageSbtPlugin._
 
-lazy val scalaVersionString = "2.11.8"
+val scala210 = "2.10.6"
+val scala211 = "2.11.8"
+val scala212 = "2.12.0"
+val scalaDefaultVersion = scala212
 
 lazy val buildSettings = Seq(
   organization       := "com.concurrentthought.cla",
   name               := "command-line-arguments",
   description        := "A library for handling command-line arguments.",
-  version            := "0.4.0",
+  version            := "0.4.1-SNAPSHOT",
 
-  scalaVersion       := scalaVersionString,
-  crossScalaVersions := Seq("2.10.6", "2.11.8"),
+  scalaVersion       := scalaDefaultVersion,
+  crossScalaVersions := Seq(scala212, scala211, scala210),
 
   maxErrors          := 5,
   triggeredMessage   := Watched.clearWhenTriggered,
@@ -27,16 +30,16 @@ lazy val buildSettings = Seq(
 
   libraryDependencies ++= Seq(
     "org.parboiled"  %% "parboiled-scala" % "1.1.7",
-    "org.scalatest"  %% "scalatest"       % "2.2.4"  % "test",
-    "org.scalacheck" %% "scalacheck"      % "1.12.5" % "test"
+    "org.scalatest"  %% "scalatest"       % "3.0.0"  % "test",
+    "org.scalacheck" %% "scalacheck"      % "1.13.4" % "test"
   )
 ) ++ extraWarnings
 
 lazy val scoverageSettings = Seq(
-  ScoverageKeys.coverageMinimum := 60,
-  ScoverageKeys.coverageFailOnMinimum := false,
-  ScoverageKeys.coverageHighlighting := scalaBinaryVersion.value != "2.10",
-  ScoverageKeys.coverageExcludedPackages := "com\\.concurrentthought\\.cla\\.examples\\..*"
+  coverageMinimum := 60,
+  coverageFailOnMinimum := false,
+  coverageHighlighting := scalaBinaryVersion.value != "2.10",
+  coverageExcludedPackages := "com\\.concurrentthought\\.cla\\.examples\\..*"
 )
 
 lazy val minScalacOptions = Seq(
