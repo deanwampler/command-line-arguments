@@ -222,8 +222,10 @@ class ArgsSpec extends FunSpec {
     describe ("process())") {
 
       val unexpectedExit: Int => Unit = (n) => fail(s"Unexpected exit($n)")
-      def expectedExit(expected: Int): Int => Unit = 
+      def expectedExit(expected: Int): Int => Unit = {
         (n) => assert(expected === n, s"Unexpected exit($n)")
+        ()
+      }
       
       it ("when successful, returns an Args with the updated Args") {
         val bytes = new ByteArrayOutputStream(2048)
