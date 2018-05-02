@@ -1,6 +1,7 @@
 scalacOptions ++= Seq("-deprecation", "-feature")
 
 addSbtPlugin("com.github.gseitz" % "sbt-release"           % "1.0.3")
+addSbtPlugin("org.xerial.sbt"    % "sbt-sonatype"          % "1.1")
 addSbtPlugin("com.eed3si9n"      % "sbt-export-repo"       % "0.1.0")
 addSbtPlugin("com.eed3si9n"      % "sbt-buildinfo"         % "0.6.1")
 addSbtPlugin("com.eed3si9n"      % "sbt-unidoc"            % "0.3.3")

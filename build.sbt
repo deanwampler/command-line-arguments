@@ -29,7 +29,7 @@ lazy val buildSettings = Seq(
   fork in console  := true,
 
   libraryDependencies ++= Seq(
-    "org.parboiled"  %% "parboiled-scala" % "1.1.7",
+    "org.parboiled"  %% "parboiled-scala" % "1.1.8",
     "org.scalatest"  %% "scalatest"       % "3.0.0"  % "test",
     "org.scalacheck" %% "scalacheck"      % "1.13.4" % "test"
   )
@@ -52,7 +52,7 @@ lazy val commonScalacOptions = minScalacOptions ++ Seq(
   "-Xfatal-warnings",
   "-Xlint",
   "-Xfuture",
-  "-Yinline-warnings",
+//  "-Yinline-warnings",
   "-Yno-adapted-args",
   "-Ywarn-dead-code",
   "-Ywarn-numeric-widen",
