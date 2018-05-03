@@ -1,24 +1,21 @@
 // Many details adapted from the Cats build: https://github.com/non/cats
 import com.typesafe.sbt.pgp.PgpKeys.publishSigned
+import com.typesafe.sbt.SbtGit.GitKeys._
 import com.typesafe.sbt.SbtSite.SiteKeys._
-import com.typesafe.sbt.SbtGhPages.GhPagesKeys._
-import sbtunidoc.Plugin.UnidocKeys._
 import ReleaseTransformations._
 import ScoverageSbtPlugin._
 
-val scala210 = "2.10.6"
-val scala211 = "2.11.8"
-val scala212 = "2.12.0"
+val scala211 = "2.11.12"
+val scala212 = "2.12.6"
 val scalaDefaultVersion = scala212
 
 lazy val buildSettings = Seq(
   organization       := "com.concurrentthought.cla",
   name               := "command-line-arguments",
   description        := "A library for handling command-line arguments.",
-  version            := "0.4.1-SNAPSHOT",
 
   scalaVersion       := scalaDefaultVersion,
-  crossScalaVersions := Seq(scala212, scala211, scala210),
+  crossScalaVersions := Seq(scala212, scala211),
 
   maxErrors          := 5,
   triggeredMessage   := Watched.clearWhenTriggered,
@@ -63,12 +60,18 @@ lazy val extraWarnings = Seq(
     CrossVersion.partialVersion(scalaVersion.value) match {
       case Some((2, 10)) =>
         Seq()
-      case Some((2, n)) if n >= 11 =>
+      case Some((2, 11)) =>
+        Seq("-Ywarn-infer-any", "-Ywarn-unused-import", "-language:existentials")
+      case Some((2, 12)) =>
         Seq("-Ywarn-infer-any", "-Ywarn-unused-import")
+      case Some(_) | None =>
+        println(s"WARNING: in build.sbt, CrossVersion.partialVersion(scalaVersion.value) returned unexpected value: ${CrossVersion.partialVersion(scalaVersion.value)}")
+        Seq() // should never happen!
     }
   },
   scalacOptions in (Compile, console) ~= {_.filterNot("-Ywarn-unused-import" == _)},
-  scalacOptions in (Test, console) ~= {_.filterNot("-Ywarn-unused-import" == _)}
+  scalacOptions in (Test, console) ~= {_.filterNot("-Ywarn-unused-import" == _)},
+  scalacOptions in (ScalaUnidoc, unidoc) += "-Ymacro-expand:none"
 )
 
 lazy val sharedPublishSettings = Seq(
@@ -99,7 +102,7 @@ lazy val sharedReleaseProcess = Seq(
     publishArtifacts,
     setNextVersion,
     commitNextVersion,
-    ReleaseStep(action = Command.process("sonatypeReleaseAll", _)),
+    releaseStepCommand("sonatypeReleaseAll"),
     pushChanges)
 )
 
@@ -124,43 +127,38 @@ lazy val publishSettings = Seq(
 ) ++ sharedPublishSettings ++ sharedReleaseProcess
 
 lazy val noPublishSettings = Seq(
-  publish := (),
-  publishLocal := (),
+  // publish := (),
+  // publishLocal := (),
   publishArtifact := false
 )
 
 
 lazy val root = project.in(file("."))
-  .settings(moduleName := "root")
+  .enablePlugins(ScalaUnidocPlugin, GhpagesPlugin)
+  .settings(
+    name := "root",
+    siteSubdirName in ScalaUnidoc := "latest/api",
+    addMappingsToSiteDir(mappings in (ScalaUnidoc, packageDoc), siteSubdirName in ScalaUnidoc),
+    gitRemoteRepo := "git@github.com:deanwampler/command-line-arguments.git"
+  )
   .settings(buildSettings ++ scoverageSettings)
   .settings(noPublishSettings)
-  .aggregate(core, examples, dist)
-  .dependsOn(core, examples)
+  .aggregate(core, examples)
 
 lazy val core = project.in(file("core"))
-  .settings(moduleName := "command-line-arguments")
+  .settings(name := "command-line-arguments")
   .settings(buildSettings ++ scoverageSettings)
   .settings(publishSettings)
 
 lazy val examples = project.in(file("examples"))
-  .settings(moduleName := "command-line-arguments-examples")
-  .settings(buildSettings ++ scoverageSettings)
+  .settings(name := "command-line-arguments-examples")
+  .settings(buildSettings)
   .settings(publishSettings)
   .dependsOn(core)
-
-// Used for exporting the repo only.
-lazy val dist = project.in(file("dist"))
-  .enablePlugins(ExportRepoPlugin)
-  .dependsOn(core, examples)
-  .settings(
-    name := "dist",
-    // add external libs here, if you want
-    // libraryDependencies += "org.typelevel" %% "cats" % "0.6.0",
-    publish := (),
-    publishLocal := ())
 
 addCommandAlias("validate", ";scalastyle;test")
 
 initialCommands += """
   import com.concurrentthought.cla._
+  import com.concurrentthought.cla.examples._
   """

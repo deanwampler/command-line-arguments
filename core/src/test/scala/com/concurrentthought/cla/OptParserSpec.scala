@@ -3,8 +3,6 @@ import org.scalatest.FunSpec
 import org.scalatest.prop.PropertyChecks
 import org.scalacheck.Gen
 import org.parboiled.scala.testing.ParboiledTest
-import scala.language.existentials
-
 
 class OptParserSpec extends FunSpec with PropertyChecks with ParboiledTest {
   import OptParser._
