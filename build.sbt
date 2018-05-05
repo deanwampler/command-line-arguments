@@ -11,7 +11,6 @@ val scalaDefaultVersion = scala212
 
 lazy val buildSettings = Seq(
   organization       := "com.concurrentthought.cla",
-  name               := "command-line-arguments",
   description        := "A library for handling command-line arguments.",
 
   scalaVersion       := scalaDefaultVersion,
@@ -20,17 +19,30 @@ lazy val buildSettings = Seq(
   maxErrors          := 5,
   triggeredMessage   := Watched.clearWhenTriggered,
 
-  scalacOptions in Compile            := commonScalacOptions,
+  scalacOptions in Compile := commonScalacOptions ++ {
+    CrossVersion.partialVersion(scalaVersion.value) match {
+      case Some((2, 10)) =>
+        Seq()
+      case Some((2, 11)) =>
+        Seq("-Ywarn-infer-any", "-Ywarn-unused-import", "-language:existentials")
+      case Some((2, 12)) =>
+        Seq("-Ywarn-infer-any", "-Ywarn-unused-import")
+      case Some(_) | None =>
+        Seq() // should never happen!
+    }
+  },
   scalacOptions in (Compile, console) := minScalacOptions,
-
-  fork in console  := true,
+  // scalacOptions in (Compile, console) ~= {_.filterNot("-Ywarn-unused-import" == _)},
+  // scalacOptions in (Test, console)    ~= {_.filterNot("-Ywarn-unused-import" == _)},
+  scalacOptions in (ScalaUnidoc, unidoc) += "-Ymacro-expand:none",
 
   libraryDependencies ++= Seq(
     "org.parboiled"  %% "parboiled-scala" % "1.1.8",
     "org.scalatest"  %% "scalatest"       % "3.0.0"  % "test",
-    "org.scalacheck" %% "scalacheck"      % "1.13.4" % "test"
-  )
-) ++ extraWarnings
+    "org.scalacheck" %% "scalacheck"      % "1.13.4" % "test"),
+
+  fork in console  := true
+)
 
 lazy val scoverageSettings = Seq(
   coverageMinimum := 60,
@@ -54,25 +66,6 @@ lazy val commonScalacOptions = minScalacOptions ++ Seq(
   "-Ywarn-dead-code",
   "-Ywarn-numeric-widen",
   "-Ywarn-value-discard")
-
-lazy val extraWarnings = Seq(
-  scalacOptions ++= {
-    CrossVersion.partialVersion(scalaVersion.value) match {
-      case Some((2, 10)) =>
-        Seq()
-      case Some((2, 11)) =>
-        Seq("-Ywarn-infer-any", "-Ywarn-unused-import", "-language:existentials")
-      case Some((2, 12)) =>
-        Seq("-Ywarn-infer-any", "-Ywarn-unused-import")
-      case Some(_) | None =>
-        println(s"WARNING: in build.sbt, CrossVersion.partialVersion(scalaVersion.value) returned unexpected value: ${CrossVersion.partialVersion(scalaVersion.value)}")
-        Seq() // should never happen!
-    }
-  },
-  scalacOptions in (Compile, console) ~= {_.filterNot("-Ywarn-unused-import" == _)},
-  scalacOptions in (Test, console) ~= {_.filterNot("-Ywarn-unused-import" == _)},
-  scalacOptions in (ScalaUnidoc, unidoc) += "-Ymacro-expand:none"
-)
 
 lazy val sharedPublishSettings = Seq(
   releaseCrossBuild := true,
@@ -126,23 +119,16 @@ lazy val publishSettings = Seq(
   credentials += Credentials(Path.userHome / ".sonatype" / ".credentials")
 ) ++ sharedPublishSettings ++ sharedReleaseProcess
 
-lazy val noPublishSettings = Seq(
-  // publish := (),
-  // publishLocal := (),
-  publishArtifact := false
-)
-
-
 lazy val root = project.in(file("."))
   .enablePlugins(ScalaUnidocPlugin, GhpagesPlugin)
   .settings(
     name := "root",
     siteSubdirName in ScalaUnidoc := "latest/api",
     addMappingsToSiteDir(mappings in (ScalaUnidoc, packageDoc), siteSubdirName in ScalaUnidoc),
-    gitRemoteRepo := "git@github.com:deanwampler/command-line-arguments.git"
+    gitRemoteRepo := "git@github.com:deanwampler/command-line-arguments.git",
+    skip in publish := true
   )
-  .settings(buildSettings ++ scoverageSettings)
-  .settings(noPublishSettings)
+  .settings(buildSettings)
   .aggregate(core, examples)
 
 lazy val core = project.in(file("core"))
@@ -161,4 +147,4 @@ addCommandAlias("validate", ";scalastyle;test")
 initialCommands += """
   import com.concurrentthought.cla._
   import com.concurrentthought.cla.examples._
-  """
+"""
