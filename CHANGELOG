@@ -1,8 +1,14 @@
+Version 0.5.0 (2018-05-03)
+--------------------------
+- Upgraded to Scala 2.12, SBT 1.1.2, and upgraded several dependency versions.
+Thanks to @intracer for help!
+- No API changes.
+
 Version 0.4.0 (2016-01-02)
 --------------------------
-- Reworked the API for invoking the parsing. There is now a `process` method 
+- Reworked the API for invoking the parsing. There is now a `process` method
 which automatically handles printing the help message, when the user requests
-help or an invalid option is specified, then exiting. 
+help or an invalid option is specified, then exiting.
 - Reorganized the project into a "core", which is the released library, and an
 "examples" project, which currently consists only of `CLASampleMain.scala`.
 

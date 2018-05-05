@@ -1,42 +1,54 @@
 // Many details adapted from the Cats build: https://github.com/non/cats
 import com.typesafe.sbt.pgp.PgpKeys.publishSigned
+import com.typesafe.sbt.SbtGit.GitKeys._
 import com.typesafe.sbt.SbtSite.SiteKeys._
-import com.typesafe.sbt.SbtGhPages.GhPagesKeys._
-import sbtunidoc.Plugin.UnidocKeys._
 import ReleaseTransformations._
 import ScoverageSbtPlugin._
 
-lazy val scalaVersionString = "2.11.8"
+val scala211 = "2.11.12"
+val scala212 = "2.12.6"
+val scalaDefaultVersion = scala212
 
 lazy val buildSettings = Seq(
   organization       := "com.concurrentthought.cla",
-  name               := "command-line-arguments",
   description        := "A library for handling command-line arguments.",
-  version            := "0.4.0",
 
-  scalaVersion       := scalaVersionString,
-  crossScalaVersions := Seq("2.10.6", "2.11.8"),
+  scalaVersion       := scalaDefaultVersion,
+  crossScalaVersions := Seq(scala212, scala211),
 
   maxErrors          := 5,
   triggeredMessage   := Watched.clearWhenTriggered,
 
-  scalacOptions in Compile            := commonScalacOptions,
+  scalacOptions in Compile := commonScalacOptions ++ {
+    CrossVersion.partialVersion(scalaVersion.value) match {
+      case Some((2, 10)) =>
+        Seq()
+      case Some((2, 11)) =>
+        Seq("-Ywarn-infer-any", "-Ywarn-unused-import", "-language:existentials")
+      case Some((2, 12)) =>
+        Seq("-Ywarn-infer-any", "-Ywarn-unused-import")
+      case Some(_) | None =>
+        Seq() // should never happen!
+    }
+  },
   scalacOptions in (Compile, console) := minScalacOptions,
-
-  fork in console  := true,
+  // scalacOptions in (Compile, console) ~= {_.filterNot("-Ywarn-unused-import" == _)},
+  // scalacOptions in (Test, console)    ~= {_.filterNot("-Ywarn-unused-import" == _)},
+  scalacOptions in (ScalaUnidoc, unidoc) += "-Ymacro-expand:none",
 
   libraryDependencies ++= Seq(
-    "org.parboiled"  %% "parboiled-scala" % "1.1.7",
-    "org.scalatest"  %% "scalatest"       % "2.2.4"  % "test",
-    "org.scalacheck" %% "scalacheck"      % "1.12.5" % "test"
-  )
-) ++ extraWarnings
+    "org.parboiled"  %% "parboiled-scala" % "1.1.8",
+    "org.scalatest"  %% "scalatest"       % "3.0.0"  % "test",
+    "org.scalacheck" %% "scalacheck"      % "1.13.4" % "test"),
+
+  fork in console  := true
+)
 
 lazy val scoverageSettings = Seq(
-  ScoverageKeys.coverageMinimum := 60,
-  ScoverageKeys.coverageFailOnMinimum := false,
-  ScoverageKeys.coverageHighlighting := scalaBinaryVersion.value != "2.10",
-  ScoverageKeys.coverageExcludedPackages := "com\\.concurrentthought\\.cla\\.examples\\..*"
+  coverageMinimum := 60,
+  coverageFailOnMinimum := false,
+  coverageHighlighting := scalaBinaryVersion.value != "2.10",
+  coverageExcludedPackages := "com\\.concurrentthought\\.cla\\.examples\\..*"
 )
 
 lazy val minScalacOptions = Seq(
@@ -49,24 +61,11 @@ lazy val commonScalacOptions = minScalacOptions ++ Seq(
   "-Xfatal-warnings",
   "-Xlint",
   "-Xfuture",
-  "-Yinline-warnings",
+//  "-Yinline-warnings",
   "-Yno-adapted-args",
   "-Ywarn-dead-code",
   "-Ywarn-numeric-widen",
   "-Ywarn-value-discard")
-
-lazy val extraWarnings = Seq(
-  scalacOptions ++= {
-    CrossVersion.partialVersion(scalaVersion.value) match {
-      case Some((2, 10)) =>
-        Seq()
-      case Some((2, n)) if n >= 11 =>
-        Seq("-Ywarn-infer-any", "-Ywarn-unused-import")
-    }
-  },
-  scalacOptions in (Compile, console) ~= {_.filterNot("-Ywarn-unused-import" == _)},
-  scalacOptions in (Test, console) ~= {_.filterNot("-Ywarn-unused-import" == _)}
-)
 
 lazy val sharedPublishSettings = Seq(
   releaseCrossBuild := true,
@@ -96,7 +95,7 @@ lazy val sharedReleaseProcess = Seq(
     publishArtifacts,
     setNextVersion,
     commitNextVersion,
-    ReleaseStep(action = Command.process("sonatypeReleaseAll", _)),
+    releaseStepCommand("sonatypeReleaseAll"),
     pushChanges)
 )
 
@@ -120,44 +119,32 @@ lazy val publishSettings = Seq(
   credentials += Credentials(Path.userHome / ".sonatype" / ".credentials")
 ) ++ sharedPublishSettings ++ sharedReleaseProcess
 
-lazy val noPublishSettings = Seq(
-  publish := (),
-  publishLocal := (),
-  publishArtifact := false
-)
-
-
 lazy val root = project.in(file("."))
-  .settings(moduleName := "root")
-  .settings(buildSettings ++ scoverageSettings)
-  .settings(noPublishSettings)
-  .aggregate(core, examples, dist)
-  .dependsOn(core, examples)
+  .enablePlugins(ScalaUnidocPlugin, GhpagesPlugin)
+  .settings(
+    name := "root",
+    siteSubdirName in ScalaUnidoc := "latest/api",
+    addMappingsToSiteDir(mappings in (ScalaUnidoc, packageDoc), siteSubdirName in ScalaUnidoc),
+    gitRemoteRepo := "git@github.com:deanwampler/command-line-arguments.git",
+    skip in publish := true
+  )
+  .settings(buildSettings)
+  .aggregate(core, examples)
 
 lazy val core = project.in(file("core"))
-  .settings(moduleName := "command-line-arguments")
+  .settings(name := "command-line-arguments")
   .settings(buildSettings ++ scoverageSettings)
   .settings(publishSettings)
 
 lazy val examples = project.in(file("examples"))
-  .settings(moduleName := "command-line-arguments-examples")
-  .settings(buildSettings ++ scoverageSettings)
+  .settings(name := "command-line-arguments-examples")
+  .settings(buildSettings)
   .settings(publishSettings)
   .dependsOn(core)
-
-// Used for exporting the repo only.
-lazy val dist = project.in(file("dist"))
-  .enablePlugins(ExportRepoPlugin)
-  .dependsOn(core, examples)
-  .settings(
-    name := "dist",
-    // add external libs here, if you want
-    // libraryDependencies += "org.typelevel" %% "cats" % "0.6.0",
-    publish := (),
-    publishLocal := ())
 
 addCommandAlias("validate", ";scalastyle;test")
 
 initialCommands += """
   import com.concurrentthought.cla._
-  """
+  import com.concurrentthought.cla.examples._
+"""

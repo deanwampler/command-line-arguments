@@ -7,7 +7,7 @@ This is a [Scala](http://scala-lang.org) library for handling command-line argum
 
 ## Usage
 
-This library is built for Scala 2.10.6, 2.11.8 (the default). Artifacts are published to [Sonatype's OSS service](https://oss.sonatype.org/index.html#nexus-search;quick%7Eshapeless). You'll need the following settings.
+This library is built for Scala 2.11.12 and 2.12.6, the default (2.10 support was dropped in the 0.5.0 release). Artifacts are published to [Sonatype's OSS service](https://oss.sonatype.org/index.html#nexus-search;quick%7Eshapeless). You'll need the following settings.
 
 ```
 resolvers ++= Seq(
@@ -16,11 +16,11 @@ resolvers ++= Seq(
 )
 ...
 
-scalaVersion := "2.11.8"  // or 2.10.6
+scalaVersion := "2.12.6"  // or 2.11.8
 
 libraryDependencies ++= Seq(
-  "com.concurrentthought.cla" %% "command-line-arguments"          % "0.4.0"
-  "com.concurrentthought.cla" %% "command-line-arguments-examples" % "0.4.0"
+  "com.concurrentthought.cla" %% "command-line-arguments"          % "0.5.0"
+  "com.concurrentthought.cla" %% "command-line-arguments-examples" % "0.5.0"
 )
 ```
 
@@ -53,7 +53,7 @@ object CLASampleMain {
 
     // Process the input arguments. If help requested or an error occurs,
     // a message is written to stdout and the program exits with an error code.
-    // Default arguments for `process` aren't shown. See also Args#parse() for 
+    // Default arguments for `process` aren't shown. See also Args#parse() for
     // more flexible handling.
     val finalArgs: Args = initialArgs.process(argstrings)
 
@@ -75,7 +75,7 @@ In this example, all are optional except for the `--input` and `others` argument
 
 The center "column" specifies the type of the option. All but the `flag` and `~flag` types accept an optional default value, which is indicated with an equals `=` sign. The following "types" are supported:
 
-|   String | Interpretation  | Corresponding Helper Method    | 
+|   String | Interpretation  | Corresponding Helper Method    |
 | -------: | :-------------- | :----------------------------- |
 |  `flag`  | `Boolean` value | [Opt.flag](src/main/scala/com/concurrentthought/cla/Opt.scala) |
 | `~flag`  | `Boolean` value | [Opt.flag](src/main/scala/com/concurrentthought/cla/Opt.scala) |
@@ -132,7 +132,7 @@ Before discussing the `process` method shown, let's see two alternative, program
       requiredFlag = true)
 
     val initialArgs = Args(
-      "run-main CLASampleMain [options]", 
+      "run-main CLASampleMain [options]",
       "Demonstrates the CLA API.",
       """Note that --input and "others" are required.""",
       Seq(input, output, logLevel, path, things, Args.quietFlag, others))
@@ -162,7 +162,7 @@ Here is a slightly more concise way to write the content in `main2`:
     import Opt._
     import Args._
     val initialArgs = Args(
-      "run-main CLASampleMain [options]", 
+      "run-main CLASampleMain [options]",
       "Demonstrates the CLA API.",
       """Note that --input and "others" are required.""",
       Seq(

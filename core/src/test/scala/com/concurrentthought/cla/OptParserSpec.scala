@@ -3,8 +3,6 @@ import org.scalatest.FunSpec
 import org.scalatest.prop.PropertyChecks
 import org.scalacheck.Gen
 import org.parboiled.scala.testing.ParboiledTest
-import scala.language.existentials
-
 
 class OptParserSpec extends FunSpec with PropertyChecks with ParboiledTest {
   import OptParser._
@@ -51,6 +49,8 @@ class OptParserSpec extends FunSpec with PropertyChecks with ParboiledTest {
     Right(OptElem(true, FlagsAndTypeElem(FlagsElem(List(FlagElem("-q"), FlagElem("--quiet"))), FlagTypeElem("false")), "Suppress some verbose output.")),
     Right(OptElem(true, FlagsAndTypeElem(FlagsElem(List(FlagElem("-a"), FlagElem("--anti"))), FlagTypeElem("true")), """An "antiflag" (defaults to true).""")),
     Right(OptElem(true, RemainingElem("others"), "Other stuff.")))
+
+  def fail(message: String): Nothing = super.fail(message)
 
   protected def forNames[L,R](
     mkStrs:   String => Seq[String])(

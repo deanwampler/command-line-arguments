@@ -12,12 +12,12 @@ import com.concurrentthought.cla._
  * run --in /in --out=/out -l=4 --path "a:b" --things=x-y|z -q foo bar baz
  * }}}
  * The last example demonstrates that both `argflag value` and `argflag=value`
- * syntax is supported. The "[...]" indicate optional arguments, so in this example, 
+ * syntax is supported. The "[...]" indicate optional arguments, so in this example,
  * you must specify the `input` argument and at least one token for "others".
  */
 object CLASampleMain {
 
-  def main(argstrings: Array[String]) = {
+  def main(argstrings: Array[String]): Unit = {
     val initialArgs: Args = """
       |run-main CLASampleMain [options]
       |Demonstrates the CLA API.
@@ -38,7 +38,7 @@ object CLASampleMain {
   }
 
   /** Functionally identical to `main`, but more verbose. */
-  def main2(argstrings: Array[String]) = {
+  def main2(argstrings: Array[String]): Unit = {
     val input  = Opt.string(
       name     = "input",
       flags    = Seq("-i", "--in", "--input"),
@@ -67,7 +67,7 @@ object CLASampleMain {
       requiredFlag = true)
 
     val initialArgs = Args(
-      "run-main CLASampleMain [options]", 
+      "run-main CLASampleMain [options]",
       "Demonstrates the CLA API.",
       """Note that --input and "others" are required.""",
       Seq(input, output, logLevel, path, things, Args.quietFlag, others)).parse(argstrings)
@@ -80,11 +80,11 @@ object CLASampleMain {
    * Functionally identical to `main` and `main2`, but more verbose than `main`,
    * yet a little less verbose than `main2`.
    */
-  def main3(argstrings: Array[String]) = {
+  def main3(argstrings: Array[String]): Unit = {
     import Opt._
     import Args._
     val initialArgs = Args(
-      "run-main CLASampleMain [options]", 
+      "run-main CLASampleMain [options]",
       "Demonstrates the CLA API.",
       """Note that --input and "others" are required.""",
       Seq(
@@ -103,7 +103,7 @@ object CLASampleMain {
   }
 
   protected def showResults(parsedArgs: Args): Unit = {
-    
+
     // Was quiet specified? If not, then write some stuff...
     if (parsedArgs.getOrElse("quiet", false)) {
       println("(... I'm being very quiet...)")

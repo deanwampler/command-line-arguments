@@ -158,7 +158,6 @@ class ArgsSpec extends FunSpec {
           "--byte",   "2"))
         val failures = List(
           ("byte",   ivs("--byte",   "z",       Some(nfe("z")))))
-        val allValues = Vector(1, 2)
         assert(args.values    === (args.defaults + ("byte" -> 2)))
         assert(args.remaining === Vector.empty[String])
         assert(args.getAll[Byte]("byte") === Vector(1,2))
@@ -181,7 +180,7 @@ class ArgsSpec extends FunSpec {
       val req2 = Opt.string("req2", Seq("--r2"), requiredFlag = true, default = Some("foo"))
       val req3 = Opt.string("req3", Seq("--r3"), requiredFlag = true)
       val requiredArgs = Args(opts = Seq(req1, req2, req3))
-        
+
       it ("contains a list of the required options, which are marked required AND don't have default values") {
         assert(requiredArgs.requiredOptions === Seq(req1, req3))
       }
@@ -222,9 +221,11 @@ class ArgsSpec extends FunSpec {
     describe ("process())") {
 
       val unexpectedExit: Int => Unit = (n) => fail(s"Unexpected exit($n)")
-      def expectedExit(expected: Int): Int => Unit = 
+      def expectedExit(expected: Int): Int => Unit = {
         (n) => assert(expected === n, s"Unexpected exit($n)")
-      
+        ()
+      }
+
       it ("when successful, returns an Args with the updated Args") {
         val bytes = new ByteArrayOutputStream(2048)
         val out2 = new PrintStream(bytes, true)
@@ -240,7 +241,7 @@ class ArgsSpec extends FunSpec {
       it ("when successful, but help requested returns a None and outputs the help") {
         val bytes = new ByteArrayOutputStream(2048)
         val out2 = new PrintStream(bytes, true)
-        val args = Args(opts = allOpts).process(
+        Args(opts = allOpts).process(
           Array("--help", "--string", "hello"), out2, expectedExit(0))
         assert(bytes.size !== 0)
       }
@@ -248,7 +249,7 @@ class ArgsSpec extends FunSpec {
       it ("when unsuccessful, returns a None and outputs an error message") {
         val bytes = new ByteArrayOutputStream(2048)
         val out2 = new PrintStream(bytes, true)
-        val args = Args(opts = allOpts).process(
+        Args(opts = allOpts).process(
           Array("--bogus", "--string", "hello"), out2, expectedExit(1))
         assert(bytes.size !== 0)
       }
@@ -320,7 +321,7 @@ class ArgsSpec extends FunSpec {
         opts              = allOpts)
 
       val tos = args.toString
-      
+
       it ("contains the program invocation") {
         assert(tos.contains("program invocation: java foo"))
       }
@@ -524,7 +525,7 @@ class ArgsSpec extends FunSpec {
   }
 
   private def nfe(s: String) = new NumberFormatException("For input string: \"%s\"".format(s))
-  private def ivs(flag: String, value: String, ex: Option[RuntimeException] = None) =
+  private def ivs(flag: String, value: String, ex: Option[RuntimeException]) =
     Opt.InvalidValueString(flag, value, ex)
 
   private def all: (Args, Map[String,Any], Map[String,Seq[Any]], Vector[String]) = {

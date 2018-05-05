@@ -1,7 +1,6 @@
 package com.concurrentthought.cla
 import org.parboiled.scala._  // scalastyle:ignore
 import org.parboiled.errors.{ErrorUtils, ParsingException}
-import scala.language.existentials
 
 /** A set of "Elements", used for convenient access from clients. */
 object Elems {
