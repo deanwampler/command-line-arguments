@@ -1,10 +1,10 @@
 package com.concurrentthought.cla
 import org.scalatest.FunSpec
-import org.scalatest.prop.PropertyChecks
+import org.scalatestplus.scalacheck.ScalaCheckPropertyChecks
 import org.scalacheck.Gen
-import org.parboiled.scala.testing.ParboiledTest
+// import org.parboiled.scala.testing.ParboiledTest
 
-class OptParserSpec extends FunSpec with PropertyChecks with ParboiledTest {
+class OptParserSpec extends FunSpec with ScalaCheckPropertyChecks { //with ParboiledTest {
   import OptParser._
   import Elems._
 

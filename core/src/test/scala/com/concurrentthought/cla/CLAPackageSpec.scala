@@ -33,65 +33,78 @@ class CLAPackageSpec extends FunSpec {
       }
     }
 
-    describe("The String Format") {
-      describe ("starts with zero or more lines, with no leading spaces") {
-        it ("uses a blank 'program invocation' and 'comments' if no such lines appear") {
-          val str = """
-            |  -i | --in  | --input      string              Path to input file.
-            |""".stripMargin
-          val args = str.toArgs
-          assert(args.programInvocation  === "")
-          assert(args.leadingComments    === "")
-          assert(args.trailingComments   === "")
-        }
-        it ("uses the first such line as the 'program invocation'.") {
-          val str = """
-            |java -cp ... foo
-            |  -i | --in  | --input      string              Path to input file.
-            |""".stripMargin
-          val args = str.toArgs
-          assert(args.programInvocation  === "java -cp ... foo")
-          assert(args.leadingComments    === "")
-        }
-        it ("uses all subsequent lines as the 'leading comments', joined together into one, space-separated line") {
-          val str = """
-            |java -cp ... foo
-            |Some description
-            |and a second line.
-            |  -i | --in  | --input      string              Path to input file.
-            |""".stripMargin
-          val args = str.toArgs
-          assert(args.programInvocation  === "java -cp ... foo")
-          assert(args.leadingComments    === "Some description and a second line.")
-          assert(args.trailingComments   === "")
-        }
-        it ("uses all trailing lines with no leading whitespace after the options as the 'trailing comments', joined together into one, space-separated line") {
-          val str = """
-            |java -cp ... foo
-            |Some description
-            |and a second line.
-            |  -i | --in  | --input      string              Path to input file.
-            |Comments after the options,
-            |which can be multiple lines.
-            |""".stripMargin
-          val args = str.toArgs
-          assert(args.programInvocation  === "java -cp ... foo")
-          assert(args.leadingComments    === "Some description and a second line.")
-          assert(args.trailingComments   === "Comments after the options, which can be multiple lines.")
-        }
-      }
+    val platforms = Seq(
+      ("UNIX",    "\n",   "\\n"),
+      ("Windows", "\r\n", "\\r\\n"))
 
-      describe ("it expects each option on a separate line, with leading whitespace") {
-        it ("extracts the leading zero or more single and/or double '-' flags, separated by |") {
-          val args = argsStr.toArgs
-          val expectedFlags = Vector(
-            Args.helpFlag.flags,
-            Vector("-i", "--in" , "--input"),
-            Vector("-o", "--out", "--output"),
-            Vector("-l", "--log", "--log-level"),
-            Vector("-p", "--path"),
-            Vector("--things"))
-          (args.opts.map(_.flags) zip expectedFlags) foreach { case (f, ef) => assert(f === ef) }
+    // Split the test args string using the system line separator, then
+    // rejoin the array with the test line separator.
+    def format(lineSeparator: String, argsStr: String): String =
+      argsStr.split(sys.props("line.separator")).mkString(lineSeparator)
+
+    describe("The String Format") {
+      for ((platform, lineSep, lineSepStr) <- platforms) {
+        describe (s"For $platform files with line separator $lineSepStr") {
+          describe ("starts with zero or more lines, with no leading spaces") {
+            it ("uses a blank 'program invocation' and 'comments' if no such lines appear") {
+              val str = format(lineSep, """
+                |  -i | --in  | --input      string              Path to input file.
+                |""".stripMargin)
+              val args = str.toArgs
+              assert(args.programInvocation  === "")
+              assert(args.leadingComments    === "")
+              assert(args.trailingComments   === "")
+            }
+            it ("uses the first such line as the 'program invocation'") {
+              val str = format(lineSep, """
+                |java -cp ... foo
+                |  -i | --in  | --input      string              Path to input file.
+                |""".stripMargin)
+              val args = str.toArgs
+              assert(args.programInvocation  === "java -cp ... foo")
+              assert(args.leadingComments    === "")
+            }
+            it ("uses all subsequent lines as the 'leading comments', joined together into one, space-separated line") {
+              val str = format(lineSep, """
+                |java -cp ... foo
+                |Some description
+                |and a second line.
+                |  -i | --in  | --input      string              Path to input file.
+                |""".stripMargin)
+              val args = str.toArgs
+              assert(args.programInvocation  === "java -cp ... foo")
+              assert(args.leadingComments    === "Some description and a second line.")
+              assert(args.trailingComments   === "")
+            }
+            it ("uses all trailing lines with no leading whitespace after the options as the 'trailing comments', joined together into one, space-separated line") {
+              val str = format(lineSep, """
+                |java -cp ... foo
+                |Some description
+                |and a second line.
+                |  -i | --in  | --input      string              Path to input file.
+                |Comments after the options,
+                |which can be multiple lines.
+                |""".stripMargin)
+              val args = str.toArgs
+              assert(args.programInvocation  === "java -cp ... foo")
+              assert(args.leadingComments    === "Some description and a second line.")
+              assert(args.trailingComments   === "Comments after the options, which can be multiple lines.")
+            }
+          }
+
+          describe ("it expects each option on a separate line, with leading whitespace") {
+            it ("extracts the leading zero or more single and/or double '-' flags, separated by |") {
+              val args = format(lineSep, argsStr).toArgs
+              val expectedFlags = Vector(
+                Args.helpFlag.flags,
+                Vector("-i", "--in" , "--input"),
+                Vector("-o", "--out", "--output"),
+                Vector("-l", "--log", "--log-level"),
+                Vector("-p", "--path"),
+                Vector("--things"))
+              (args.opts.map(_.flags) zip expectedFlags) foreach { case (f, ef) => assert(f === ef) }
+            }
+          }
         }
       }
     }

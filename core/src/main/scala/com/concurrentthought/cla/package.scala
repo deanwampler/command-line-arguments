@@ -9,6 +9,13 @@ import scala.util.Try
 package object cla {
 
   /**
+   * Split on UNIX \n and Windows \r\n, and even allow \r for line separators.
+   * This fixes https://github.com/deanwampler/command-line-arguments/issues/6
+   * and also supports the case where a UNIX file is read on Windows and vice-versa.
+   */
+  val lineSeparator = """[\r\n]{1,2}"""
+
+  /**
    * Specify the command-line arguments using a single, multi-line string.
    * Note the following example:
    * {{{
@@ -32,7 +39,7 @@ package object cla {
    * The format, as illustrated in the example, has the following requirements:
    * <ol>
    * <li>Zero or more leading and trailing lines without opening whitespace are
-   *   interpreted as the "program invocation" string in the help message, 
+   *   interpreted as the "program invocation" string in the help message,
    *   followed by zero or more description lines, which will be concatenated
    *   together (separated by whitespace) in the help message.</li>
    * <li>Each option appears on a line with leading whitespace.</li>
@@ -77,7 +84,7 @@ package object cla {
     import Elems._  // scalastyle:ignore
 
     def toArgs: Args = {
-      val lines = str.split("\n").filter(_.length != 0).toVector
+      val lines = str.split(lineSeparator).filter(_.length != 0).toVector
 
       // Partition the lines into the leading comments, the options (which have
       // leading whitespace), and the trailing comments.
@@ -118,10 +125,10 @@ package object cla {
 
     // scalastyle:off
     protected def toOpt(typeElem: TypeElem[_],
-      name: String, optional: Boolean, 
+      name: String, optional: Boolean,
       flags: Seq[String], help: String): Opt[_] = typeElem match {
 
-      case e: FlagTypeElem   => 
+      case e: FlagTypeElem   =>
         if (toBool(e.initialValue) == false) Opt.flag(name, flags, help, !optional)
         else Opt.notflag(name, flags, help, !optional)
       case e: StringTypeElem => Opt.string(name, flags, e.initialValue, help, !optional)
@@ -139,7 +146,7 @@ package object cla {
 
     protected def toBool(o: Option[Boolean]): Boolean = o.getOrElse(false)
 
-    protected def toInitSeq(init: Option[String], delim: String): Option[Seq[String]] = 
+    protected def toInitSeq(init: Option[String], delim: String): Option[Seq[String]] =
       init.map(_.split(delim).toSeq)
   }
 }
