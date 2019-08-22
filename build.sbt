@@ -6,7 +6,8 @@ import ReleaseTransformations._
 import ScoverageSbtPlugin._
 
 val scala211 = "2.11.12"
-val scala212 = "2.12.6"
+val scala212 = "2.12.9"
+val scala213 = "2.13.0"
 val scalaDefaultVersion = scala212
 
 lazy val buildSettings = Seq(
@@ -14,7 +15,7 @@ lazy val buildSettings = Seq(
   description        := "A library for handling command-line arguments.",
 
   scalaVersion       := scalaDefaultVersion,
-  crossScalaVersions := Seq(scala212, scala211),
+  crossScalaVersions := Seq(scala213, scala212, scala211),
 
   maxErrors          := 5,
   triggeredMessage   := Watched.clearWhenTriggered,
@@ -25,7 +26,7 @@ lazy val buildSettings = Seq(
         Seq()
       case Some((2, 11)) =>
         Seq("-Ywarn-infer-any", "-Ywarn-unused-import", "-language:existentials")
-      case Some((2, 12)) =>
+      case ( Some((2, 12)) | Some((2, 13))) =>
         Seq("-Ywarn-infer-any", "-Ywarn-unused-import")
       case Some(_) | None =>
         Seq() // should never happen!
@@ -37,9 +38,9 @@ lazy val buildSettings = Seq(
   scalacOptions in (ScalaUnidoc, unidoc) += "-Ymacro-expand:none",
 
   libraryDependencies ++= Seq(
-    "org.parboiled"  %% "parboiled-scala" % "1.1.8",
-    "org.scalatest"  %% "scalatest"       % "3.0.0"  % "test",
-    "org.scalacheck" %% "scalacheck"      % "1.13.4" % "test"),
+    "org.parboiled"  %% "parboiled-scala" % "1.3.1",
+    "org.scalatest"  %% "scalatest"       % "3.0.8"  % "test",
+    "org.scalacheck" %% "scalacheck"      % "1.14.0" % "test"),
 
   fork in console  := true
 )
@@ -61,8 +62,8 @@ lazy val commonScalacOptions = minScalacOptions ++ Seq(
   "-Xfatal-warnings",
   "-Xlint",
   "-Xfuture",
-//  "-Yinline-warnings",
-  "-Yno-adapted-args",
+  // "-Yinline-warnings",
+  // "-Yno-adapted-args",
   "-Ywarn-dead-code",
   "-Ywarn-numeric-widen",
   "-Ywarn-value-discard")

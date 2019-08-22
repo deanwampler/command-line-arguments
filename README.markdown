@@ -7,7 +7,7 @@ This is a [Scala](http://scala-lang.org) library for handling command-line argum
 
 ## Usage
 
-This library is built for Scala 2.11.12 and 2.12.6, the default (2.10 support was dropped in the 0.5.0 release). Artifacts are published to [Sonatype's OSS service](https://oss.sonatype.org/index.html#nexus-search;quick%7Eshapeless). You'll need the following settings.
+This library is built for Scala 2.11.12, 2.12.9 (the default), and 2.13.0. Artifacts are published to [Sonatype's OSS service](https://oss.sonatype.org/index.html#nexus-search;quick%7Eshapeless). You'll need the following settings.
 
 ```
 resolvers ++= Seq(
@@ -16,11 +16,11 @@ resolvers ++= Seq(
 )
 ...
 
-scalaVersion := "2.12.6"  // or 2.11.8
+scalaVersion := "2.12.9"
 
 libraryDependencies ++= Seq(
-  "com.concurrentthought.cla" %% "command-line-arguments"          % "0.5.0"
-  "com.concurrentthought.cla" %% "command-line-arguments-examples" % "0.5.0"
+  "com.concurrentthought.cla" %% "command-line-arguments"          % "0.6.0"
+  "com.concurrentthought.cla" %% "command-line-arguments-examples" % "0.6.0"
 )
 ```
 
@@ -28,9 +28,9 @@ The `examples` can be omitted.
 
 ## API
 
-The included [com.concurrentthought.cla.CLASampleMain](src/main/scala/com/concurrentthought/cla/CLASampleMain.scala) shows two different idiomatic ways to set up and use the API.
+There are several idiomatic ways to setup and use the API. The simplest approach parses a multi-line string to specify the command-line arguments [com.concurrentthought.cla.Args](src/main/scala/com/concurrentthought/cla/Args.scala) using what is essentially an embedded DSL (domain specific language).
 
-The simplest approach parses a multi-line string to specify the command-line arguments [com.concurrentthought.cla.Args](src/main/scala/com/concurrentthought/cla/Args.scala):
+The [com.concurrentthought.cla.CLASampleMain](examples/src/main/scala/com/concurrentthought/cla/CLASampleMain.scala) in the `examples` subproject shows two different idiomatic ways to set up and use the API. For example:
 
 ```scala
 import com.concurrentthought.cla._
@@ -63,6 +63,35 @@ object CLASampleMain {
   ...
 ```
 
+To run this example using `sbt`:
+
+```
+sbt:command-line-arguments> project examples
+sbt:command-line-arguments-examples> run -h
+[info] Running com.concurrentthought.cla.examples.CLASampleMain -h
+Usage: run-main CLASampleMain [options] [options]
+Demonstrates the CLA API.
+Where the supported options are the following:
+
+  [-h | --h | --help]                      Show this help message.
+   -i | --in | --input  input              Path to input file.
+  [-o | --out | --output  output]          Path to output file.
+                                           (default: /dev/null)
+  [-l | --log | --log-level  log-level]    Log level to use.
+                                           (default: 3)
+  [-p | --path  path]                      Path elements separated by ':' (*nix) or ';' (Windows).
+  [--things  things]                       String elements separated by '-' or '|'.
+  [-q | --quiet]                           Suppress some verbose output.
+   others                                  Other arguments.
+
+You can also use --foo=bar syntax. Arguments shown in [...] are optional. All others are required.
+Note that --input and "others" are required.
+
+
+Exception: sbt.TrapExitSecurityException thrown from the UncaughtExceptionHandler in thread "run-main-2"
+[success] Total time: 0 s, completed Aug 22, 2019 3:23:16 PM
+sbt:command-line-arguments-examples>
+```
 The [Scaladocs comments](src/main/scala/com/concurrentthought/cla/package.scala) for the [cla package](src/main/scala/com/concurrentthought/cla/package.scala) explain the format and its limitations, but hopefully most of the format is reasonable intuitive from the example.
 
 The first and last lines in the string that *don't* have leading whitespace are interpreted as lines to show as part of the corresponding help message. It's a good idea to use the first line to show an example of how to invoke the program.
@@ -233,17 +262,18 @@ The `get[V]` method returns values of the expected type. It uses `asInstanceOf[]
 
 Note that an advantage of `getOrElse[V]` is that its type parameter can be inferred due to the second argument.
 
-Try running the following examples within SBT (`run` and `run-main com.concurrentthought.cla.CLASampleMain` do the same thing):
+Try running the following examples within SBT, where `run` and `run-main com.concurrentthought.cla.CLASampleMain` do the same thing since there is only one object with a `main` method. (This time I'll just use `>` for the SBT prompt.):
 
 ```
- run-main com.concurrentthought.cla.CLASampleMain -h
- run -h
- run --help
- run -i /in -o /out -l 4 -p a:b --things x-y|z foo bar baz
- run -i /in -o /out -l 4 -p a:b --things x-y|z foo bar baz --quiet
- run --in /in --out=/out -l=4 --path "a:b" --things=x-y|z foo bar baz
+> project examples
+> run-main com.concurrentthought.cla.CLASampleMain -h
+> run -h
+> run --help
+> run -i /in -o /out -l 4 -p a:b --things x-y|z foo bar baz
+> run -i /in -o /out -l 4 -p a:b --things x-y|z foo bar baz --quiet
+> run --in /in --out=/out -l=4 --path "a:b" --things=x-y|z foo bar baz
 ```
 
-The last example mixes `argflag value` and `argflag=value` syntax, which of are both supported.
+The last example mixes `argflag value` and `argflag=value` syntax, which are both supported.
 
 Try a few runs with unknown flags and other errors. Note the error handling that's done, such as when you omit a value expected by a flag, or you provide an invalid value, such as `--log-level foo`.
