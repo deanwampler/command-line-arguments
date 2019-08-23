@@ -29,15 +29,15 @@ class OptSpec extends FunSpec {
       val opt = Opt.string(
         name     = "in",
         flags    = Seq("-i", "--in", "--input"),
-        requiredFlag = true)
-      assert(opt.required === true)
+        required = true)
+      assert(opt.isRequired === true)
     }
 
     it ("defaults to not required") {
       val opt = Opt.string(
         name     = "in",
         flags    = Seq("-i", "--in", "--input"))
-      assert(opt.required === false)
+      assert(opt.isRequired === false)
     }
 
     it ("ignores the required flag if the default is not None") {
@@ -45,8 +45,8 @@ class OptSpec extends FunSpec {
         name     = "in",
         flags    = Seq("-i", "--in", "--input"),
         default  = Some("foo"),
-        requiredFlag = true)
-      assert(opt.required === false)
+        required = true)
+      assert(opt.isRequired === false)
     }
 
     it ("allows the list of flags to be empty (but see Args requirements)") {
@@ -102,7 +102,7 @@ class OptSpec extends FunSpec {
   }
 
   describe ("object Opt") {
-     
+
     describe ("flag() constructs a Boolean option") {
       it ("defaults the value to false") {
         assert(helpFlag.default === Some(false))
@@ -127,7 +127,7 @@ class OptSpec extends FunSpec {
         assert(("anti", Success(false)) === result._1)
       }
     }
-     
+
     describe ("string() constructs a String option") {
       it ("returns the value string unmodified") {
         val result = stringOpt.parser(Seq("--string", "foo", "one", "two"))
@@ -155,7 +155,7 @@ class OptSpec extends FunSpec {
       it ("returns a Failure(Opt.InvalidValueString) if the value string is empty") {
         val result = charOpt.parser(Seq("--char", "", "one", "two"))
         result._1 match {
-          case ("char", Failure(Opt.InvalidValueString("--char", "", Some(ex)))) => /* pass */
+          case ("char", Failure(Opt.InvalidValueString("--char", "", Some(ex@_)))) => /* pass */
           case bad => fail(bad.toString)
         }
         assert(Seq("one", "two") === result._2)
@@ -171,7 +171,7 @@ class OptSpec extends FunSpec {
       it ("returns a Failure(Opt.InvalidValueString) if the value is not an integer") {
         byteOpt.parser(Seq("--byte", "x", "--bar")) match {
           case (("byte", Failure(failure)), Seq("--bar")) => failure match {
-            case Opt.InvalidValueString("--byte", "x", Some(th)) => /* pass */
+            case Opt.InvalidValueString("--byte", "x", Some(th@_)) => /* pass */
             case _ => fail("Unexpected exception: "+failure)
           }
           case badResult => fail(badResult.toString)
@@ -188,7 +188,7 @@ class OptSpec extends FunSpec {
       it ("returns a Failure(Opt.InvalidValueString) if the value is not an integer") {
         intOpt.parser(Seq("--int", "x", "--bar")) match {
           case (("int", Failure(failure)), Seq("--bar")) => failure match {
-            case Opt.InvalidValueString("--int", "x", Some(th)) => /* pass */
+            case Opt.InvalidValueString("--int", "x", Some(th@_)) => /* pass */
             case _ => fail("Unexpected exception: "+failure)
           }
           case badResult => fail(badResult.toString)
@@ -205,7 +205,7 @@ class OptSpec extends FunSpec {
       it ("returns a Failure(Opt.InvalidValueString) if the value is not an integer") {
         longOpt.parser(Seq("--long", "x", "--bar")) match {
           case (("long", Failure(failure)), Seq("--bar")) => failure match {
-            case Opt.InvalidValueString("--long", "x", Some(th)) => /* pass */
+            case Opt.InvalidValueString("--long", "x", Some(th@_)) => /* pass */
             case _ => fail("Unexpected exception: "+failure)
           }
           case badResult => fail(badResult.toString)
@@ -225,7 +225,7 @@ class OptSpec extends FunSpec {
       it ("returns a Failure(Opt.InvalidValueString) if the value is not a number") {
         floatOpt.parser(Seq("--float", "x", "--bar")) match {
           case (("float", Failure(failure)), Seq("--bar")) => failure match {
-            case Opt.InvalidValueString("--float", "x", Some(th)) => /* pass */
+            case Opt.InvalidValueString("--float", "x", Some(th@_)) => /* pass */
             case _ => fail("Unexpected exception: "+failure)
           }
           case badResult => fail(badResult.toString)
@@ -245,7 +245,7 @@ class OptSpec extends FunSpec {
       it ("returns a Failure(Opt.InvalidValueString) if the value is not a number") {
         doubleOpt.parser(Seq("--double", "x", "--bar")) match {
           case (("double", Failure(failure)), Seq("--bar")) => failure match {
-            case Opt.InvalidValueString("--double", "x", Some(th)) => /* pass */
+            case Opt.InvalidValueString("--double", "x", Some(th@_)) => /* pass */
             case _ => fail("Unexpected exception: "+failure)
           }
           case badResult => fail(badResult.toString)
@@ -261,7 +261,7 @@ class OptSpec extends FunSpec {
       it ("returns a Failure(Opt.InvalidValueString) if the value fails to parse") {
         seqOpt.parser(Seq("--seq", "a:b_c-d", "--bar")) match {
           case (("seq", Failure(failure)), Seq("--bar")) => failure match {
-            case Opt.InvalidValueString("--seq", "a:b_c-d", Some(th)) => /* pass */
+            case Opt.InvalidValueString("--seq", "a:b_c-d", Some(th@_)) => /* pass */
             case _ => fail("Unexpected exception: "+failure)
           }
           case badResult => fail(badResult.toString)
@@ -285,6 +285,47 @@ class OptSpec extends FunSpec {
         val expected = Try(path.split(pathDelim).toVector)
         val result = pathOpt.parser(Seq("--path", path, "one", "two"))
         assert((("path", expected), Seq("one", "two")) === result)
+      }
+    }
+
+    describe ("socket constructs a (String,Int) option for socket host:port combinations") {
+      it ("defines a socket (host:port) option") {
+        assert(Opt.socket().default === None)
+      }
+      it ("can be made required") {
+        assert(Opt.socket(required = true).isRequired === true)
+      }
+
+      describe ("""requires a string of the form "host:port" option""") {
+        it ("can be provided a default value") {
+          assert(Opt.socket(default = Some(("host",123))).default === Some(("host",123)))
+        }
+        it ("succeeds if the host is a name or IP address and the port is an integer") {
+          val expected = (("socket", Try(("host", 123))), Nil)
+          assert(Opt.socket().parser(Seq("--socket", "host:123")) === expected)
+        }
+        it ("returns a Failure(Opt.InvalidValueString) if the :port is missing") {
+          Opt.socket().parser(Seq("--socket", "host"))
+          val result = Opt.socket().parser(Seq("--socket", "host", "--bar"))
+          val r1 = ("socket", Failure(Opt.InvalidValueString("--socket", "host", None)))
+          val r2 = Seq("--bar")
+          assert((r1, r2) === result)
+        }
+        it ("returns a Failure(Opt.InvalidValueString) if the host: is missing") {
+          val result = Opt.socket().parser(Seq("--socket", "123", "--bar"))
+          val r1 = ("socket", Failure(Opt.InvalidValueString("--socket", "123", None)))
+          val r2 = Seq("--bar")
+          assert((r1, r2) === result)
+        }
+        it ("returns a Failure(Opt.InvalidValueString) if the port is not an integer") {
+          Opt.socket().parser(Seq("--socket", "host:foo", "--bar")) match {
+            case (("socket", Failure(failure)), Seq("--bar")) => failure match {
+              case Opt.InvalidValueString("--socket", "host:foo (not an int?)", Some(th@_)) => /* pass */
+              case _ => fail("Unexpected exception: "+failure)
+            }
+            case badResult => fail(badResult.toString)
+          }
+        }
       }
     }
   }

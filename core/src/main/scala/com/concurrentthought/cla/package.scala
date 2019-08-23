@@ -90,6 +90,7 @@ package object cla {
       // leading whitespace), and the trailing comments.
       type VS = Vector[String]
       val  ve = Vector.empty[String]
+      @annotation.tailrec
       def split(lines: Vector[String], result: (VS,VS,VS)): (VS,VS,VS) = {
         val leadingWhitespace = """^\s+""".r
         val (l,o,t) = result
@@ -152,7 +153,7 @@ package object cla {
 }
 
 package cla {
-  case class ParseError(msg: String, cause: Throwable = null) // scalastyle:ignore
+  final case class ParseError(msg: String, cause: Throwable = null) // scalastyle:ignore
     extends RuntimeException(msg, cause)
 }
 

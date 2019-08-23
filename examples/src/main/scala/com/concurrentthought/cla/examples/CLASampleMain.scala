@@ -31,7 +31,7 @@ object CLASampleMain {
       |Note that --input and "others" are required.
       |""".stripMargin.toArgs
 
-    val finalArgs: Args = initialArgs.process(argstrings)
+    val finalArgs: Args = initialArgs.process(argstrings.toIndexedSeq)
 
     // If here, successfully parsed the args and none where "--help" or "-h".
     showResults(finalArgs)
@@ -43,7 +43,7 @@ object CLASampleMain {
       name     = "input",
       flags    = Seq("-i", "--in", "--input"),
       help     = "Path to input file.",
-      requiredFlag = true)
+      required = true)
     val output = Opt.string(
       name     = "output",
       flags    = Seq("-o", "--out", "--output"),
@@ -64,15 +64,16 @@ object CLASampleMain {
     val others = Args.makeRemainingOpt(
       name     = "others",
       help     = "Other arguments",
-      requiredFlag = true)
+      required = true)
 
     val initialArgs = Args(
       "run-main CLASampleMain [options]",
       "Demonstrates the CLA API.",
       """Note that --input and "others" are required.""",
-      Seq(input, output, logLevel, path, things, Args.quietFlag, others)).parse(argstrings)
+      Seq(input, output, logLevel, path, things, Args.quietFlag, others))
+      .parse(argstrings.toIndexedSeq)
 
-    val finalArgs: Args = initialArgs.process(argstrings)
+    val finalArgs: Args = initialArgs.process(argstrings.toIndexedSeq)
     showResults(finalArgs)
   }
 
@@ -98,7 +99,7 @@ object CLASampleMain {
         makeRemainingOpt(
                "others",                                                          "Other arguments", true)))
 
-    val finalArgs: Args = initialArgs.process(argstrings)
+    val finalArgs: Args = initialArgs.process(argstrings.toIndexedSeq)
     showResults(finalArgs)
   }
 

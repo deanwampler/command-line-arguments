@@ -12,7 +12,7 @@ import java.io.PrintStream
  * to construct initial instances correctly. Subsequent calls to `Args.parse` return
  * new, updated instances.
  */
-case class Args protected (
+final case class Args protected (
   programInvocation: String,
   leadingComments:   String,
   trailingComments:  String,
@@ -25,29 +25,33 @@ case class Args protected (
 
   def help: String = Help(this)
 
-  val requiredOptions = opts.filter(o => o.required)
+  val requiredOptions = opts.filter(o => o.isRequired)
 
-  // We want the unknownOptionMatch to be just before the "remaining" option.
-  protected val remainingOpt = opts.find(_.flags.size == 0).get
+  protected val remainingOpt = opts.find(_.flags.size == 0).getOrElse(
+    throw new IllegalStateException(s"BUG. There should be at least one 'remaining opts' Opt. opts = ${opts.mkString(", ")}"))
   protected val remainingOptName = remainingOpt.name
   protected val opts2: Seq[Opt[_]] = opts.filter(_.name != remainingOptName)
-  
+
+  // We want the unknownOptionMatch to be just before the "remaining" option.
   lazy val parserChain: Opt.Parser[_] =
-    opts2.map(_.parser) reduceLeft (_ orElse _) orElse unknownOptionMatch orElse remainingOpt.parser
+    opts2.map(_.parser)
+      .reduceLeft(_ orElse _)
+      .orElse(unknownOptionMatch)
+      .orElse(remainingOpt.parser)
 
   /**
    * Convenience method to parse the argument list and handle errors or
    * help requests.
    * If a parsing error occurs or help is requested, an appropriate message
    * is printed to the `out` argument and the program exits with a call to
-   * `sys.exit(n)` with the integer exit returned by the sister `Args#process` 
-   * method. Normally, the default values for the `out` and `exit` arguments 
+   * `sys.exit(n)` with the integer exit returned by the sister `Args#process`
+   * method. Normally, the default values for the `out` and `exit` arguments
    * are only overridden for testing.
    * For more customized handling, {@see #parse}.
    * @return Args
    */
   def process(
-    args: Seq[String], 
+    args: Seq[String],
     out: PrintStream = Console.out,
     exit: Int => Unit = n => sys.exit(n)): Args = {
     val newArgs = parse(args)
@@ -64,23 +68,25 @@ case class Args protected (
    * @return Args
    */
   def parse(args: Seq[String]): Args = {
-    def p(args2: Seq[String]): Seq[(String, Any)] = args2 match {
-      case Nil => Nil
-      case seq: Any => try {
-        parserChain(seq) match {
-          case ((flag, Success(value)), tail) => (flag, value) +: p(tail)
-          case ((flag, Failure(failure)), tail) => (flag, failure) +: p(tail)
-        }
-      } catch {
-        case e @ Args.UnrecognizedArgument(head, tail) => (head, e) +: p(tail)
-        // Otherwise, assume that attempting to parse the value failed, but
-        // perhaps it's the next option?
-        case NonFatal(nf) => (seq.head, nf) +: p(seq.tail)
+    def callParserChain(seq: Seq[String]): ((String, Try[Any]), Seq[String]) = try {
+      parserChain(seq)
+    } catch {
+      case e @ Args.UnrecognizedArgument(head, tail) => ((head, Failure(e)), tail)
+      // Otherwise, assume that attempting to parse the value failed, but
+      // perhaps it's the next option?
+      case NonFatal(nf) => ((seq.head, Failure(nf)), seq.tail)
+    }
+    @annotation.tailrec
+    def p(args2: Seq[String], vect: Vector[(String, Any)] = Vector.empty): Vector[(String, Any)] = args2 match {
+      case Nil => vect
+      case seq => callParserChain(seq) match {
+        case ((flag, Success(value)), tail) => p(tail, vect :+ (flag -> value))
+        case ((flag, Failure(failure)), tail) => p(tail, vect :+ (flag -> failure))
       }
     }
 
     val (failures, successes) = p(args) partition {
-      case (_, NonFatal(nf)) => true
+      case (_, NonFatal(nf@_)) => true
       case _ => false
     }
 
@@ -244,7 +250,6 @@ case class Args protected (
 object Args {
 
   val HELP_KEY      = "help"
-  val REMAINING_KEY = "remaining"
 
   val defaultProgramInvocation: String = "java -cp ..."
   val defaultComments: String = ""
@@ -292,35 +297,33 @@ object Args {
     // Add opts or help at the beginning and "remaining" (no flag) tokens at
     // the end, if necessary. Also, add defaults and values for the extra
     // options, if needed.
-    var opts1 = opts.toVector
-    var defaults1 = defaults
-    var values1 = values
-    var remaining1 = Vector.empty[String]
-    if (opts1.exists(_.name == HELP_KEY) == false) { // scalastyle:ignore
-      opts1 = helpFlag +: opts1
-      val hf = (HELP_KEY -> false)
-      defaults1 = defaults1 + hf
-      values1   = values1   + hf
-    }
-    if (noFlagOpts.size == 0) {
-      opts1 = opts1 :+ remainingOpt
-    } else {
-      // Make sure the remaining values aren't in "defaults1" or "values1", but update "remaining1"
-      val noFlagName = noFlagOpts.head.name
-      defaults1  -= noFlagName
-      values1    -= noFlagName
-      remaining1  = noFlagOpts.head.default match {
-        case Some(s) => s match {
-          case s: Seq[_] => s.map(_.toString).toVector // _ should already be String, but erasure...
-          case x: Any => Vector(x.toString)
+    val (opts1, defaults1, values1) =
+      if (opts.exists(_.name == HELP_KEY) == false) { // scalastyle:ignore
+        val hf = (HELP_KEY -> false)
+        (helpFlag +: opts.toVector, defaults + hf, values + hf)
+      } else (opts.toVector, defaults, values)
+
+    val (opts2, defaults2, values2, remaining2) =
+      if (noFlagOpts.size == 0) {
+        (opts1 :+ remainingOpt, defaults1, values1, Vector.empty[String])
+      } else {
+        // Make sure the remaining values aren't in "defaults1" or "values1", but update "remaining"
+        val noFlagName = noFlagOpts.head.name
+        val defs2 = defaults1 - noFlagName
+        val vals2 = values1 - noFlagName
+        val rem2 = noFlagOpts.head.default match {
+          case Some(s) => s match {
+            case s: Seq[_] => s.map(_.toString).toVector // _ should already be String, but erasure...
+            case x: Any => Vector(x.toString)
+          }
+          case None => Vector.empty[String]
         }
-        case None => Vector.empty[String]
+        (opts1, defs2, vals2, rem2)
       }
-    }
-    val allValues1 = values1.map{ case (k,v) => (k,Vector(v)) }
-    val failures1  = Seq.empty[(String,Any)]
+    val allValues = values2.map{ case (k,v) => (k,Vector(v)) }
+    val failures  = Seq.empty[(String,Any)]
     new Args(programInvocation, leadingComments, trailingComments,
-      opts1, defaults1, values1, allValues1, remaining1, failures1)
+      opts2, defaults2, values2, allValues, remaining2, failures)
   }
 
   // Common options.
@@ -342,50 +345,24 @@ object Args {
    * Note that it has no flags; only one such option is allowed in an `Args`.
    */
   def makeRemainingOpt(
-    name: String = REMAINING_KEY,
+    name: String = Opt.REMAINING_KEY,
     help: String = "All remaining arguments that aren't associated with flags.",
-    requiredFlag: Boolean = false): Opt[String] =
-      new Opt[String](name = name, flags = Nil, help = help, requiredFlag = requiredFlag)(s => Try(s)) {
-
-        /** Now there are no flags expected as the first token. */
-        override val parser: Opt.Parser[String] = {
-          case value +: tail => ((name, Success(value)), tail)
-        }
-      }
+    required: Boolean = false): Opt[String] = Opt.bareTokens(name, help, required)
 
   val remainingOpt = makeRemainingOpt()
 
-  /** Socket host and port. */
-  def socketOpt(default: Option[(String, Int)] = None, 
-      required: Boolean = false): Opt[(String,Int)] = Opt[(String,Int)](
-    name    = "socket",
-    flags   = Seq("-s", "--socket"),
-    default = default,
-    help    = "Socket host:port.",
-    requiredFlag = required) { s =>
-      val array = s.split(":")
-      if (array.length != 2) Failure(Opt.InvalidValueString("--socket", s))
-      else {
-        val host = array(0)
-        Try(array(1).toInt) match {
-          case Success(port) => Success(host -> port)
-          case Failure(th)   => Failure(Opt.InvalidValueString("--socket", s"$s (not an int?)", Some(th)))
-        }
-      }
-    }
-
-  case class MissingRequiredArgument[T](o: Opt[T])
+  final case class MissingRequiredArgument[T](o: Opt[T])
     extends RuntimeException("") {
 
-    override def toString: String = 
+    override def toString: String =
       s"""Missing required argument: "${o.name}"${flagsString} ${o.help}"""
 
-    protected def flagsString = 
+    protected def flagsString =
       if (o.flags.size == 0) ""
       else s""" with flags ${o.flags.mkString(" | ")},"""
   }
 
-  case class UnrecognizedArgument(arg: String, rest: Seq[String])
+  final case class UnrecognizedArgument(arg: String, rest: Seq[String])
     extends RuntimeException("") {
       override def toString: String =
         s"Unrecognized argument (or missing value): $arg ${restOfArgs(rest)}"
@@ -395,7 +372,12 @@ object Args {
     }
 
   def defaults(opts: Seq[Opt[_]]): Map[String,Any] =
-    opts.filter(_.default != None).map(o => (o.name, o.default.get)).toMap
+    opts.foldLeft(Map.empty[String,Any]) { (map, opt) =>
+      opt.default match {
+        case None => map
+        case Some(obj) => map + (opt.name -> obj)
+      }
+    }
 }
 
 

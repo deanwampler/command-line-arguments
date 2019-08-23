@@ -6,20 +6,20 @@ import org.parboiled.errors.{ErrorUtils, ParsingException}
 object Elems {
   sealed trait Elem
 
-  case class OptElem(optional: Boolean, flags_remaining: FlagsAndType_Or_RemainingElem, help: String) extends Elem
+  final case class OptElem(optional: Boolean, flags_remaining: FlagsAndType_Or_RemainingElem, help: String) extends Elem
 
-  abstract class FlagsAndType_Or_RemainingElem extends Elem
-  case class  FlagsAndTypeElem(flags: FlagsElem, typ: TypeElem[_]) extends FlagsAndType_Or_RemainingElem
-  case class  RemainingElem(name: String) extends FlagsAndType_Or_RemainingElem
+  sealed abstract class FlagsAndType_Or_RemainingElem extends Elem
+  final case class  FlagsAndTypeElem(flags: FlagsElem, typ: TypeElem[_]) extends FlagsAndType_Or_RemainingElem
+  final case class  RemainingElem(name: String) extends FlagsAndType_Or_RemainingElem
 
 
-  case class FlagsElem(flags: Seq[FlagElem]) extends Elem
-  case class FlagElem(flag: String) extends Elem
-  case class StringElem(text: String) extends Elem
+  final case class FlagsElem(flags: Seq[FlagElem]) extends Elem
+  final case class FlagElem(flag: String) extends Elem
+  final case class StringElem(text: String) extends Elem
 
   import scala.reflect.ClassTag
 
-  abstract class TypeElem[T : ClassTag](val initialValueStr: String)(toT: String => T) extends Elem {
+  sealed abstract class TypeElem[T : ClassTag](val initialValueStr: String)(toT: String => T) extends Elem {
     val initialValue: Option[T] = try {
       if (initialValueStr.trim == "") None else Some(toT(initialValueStr))
     } catch {
@@ -30,17 +30,17 @@ object Elems {
     }
   }
 
-  case class  FlagTypeElem(   ivs: String) extends TypeElem[Boolean](removeEQ(ivs))(_.toBoolean)
-  case class  StringTypeElem( ivs: String) extends TypeElem[String](removeEQ(ivs))(_.toString)
-  case class  ByteTypeElem(   ivs: String) extends TypeElem[Byte](removeEQ(ivs))(_.toByte)
-  case class  CharTypeElem(   ivs: String) extends TypeElem[Char](removeEQ(ivs))(_(0))
-  case class  IntTypeElem(    ivs: String) extends TypeElem[Int](removeEQ(ivs))(_.toInt)
-  case class  LongTypeElem(   ivs: String) extends TypeElem[Long](removeEQ(ivs))(_.toLong)
-  case class  FloatTypeElem(  ivs: String) extends TypeElem[Float](removeEQ(ivs))(_.toFloat)
-  case class  DoubleTypeElem( ivs: String) extends TypeElem[Double](removeEQ(ivs))(_.toDouble)
+  final case class  FlagTypeElem(   ivs: String) extends TypeElem[Boolean](removeEQ(ivs))(_.toBoolean)
+  final case class  StringTypeElem( ivs: String) extends TypeElem[String](removeEQ(ivs))(_.toString)
+  final case class  ByteTypeElem(   ivs: String) extends TypeElem[Byte](removeEQ(ivs))(_.toByte)
+  final case class  CharTypeElem(   ivs: String) extends TypeElem[Char](removeEQ(ivs))(_(0))
+  final case class  IntTypeElem(    ivs: String) extends TypeElem[Int](removeEQ(ivs))(_.toInt)
+  final case class  LongTypeElem(   ivs: String) extends TypeElem[Long](removeEQ(ivs))(_.toLong)
+  final case class  FloatTypeElem(  ivs: String) extends TypeElem[Float](removeEQ(ivs))(_.toFloat)
+  final case class  DoubleTypeElem( ivs: String) extends TypeElem[Double](removeEQ(ivs))(_.toDouble)
 
-  case class  SeqTypeElem(delimiter: String, ivs: String)  extends TypeElem[String](toVS(ivs))(identity)
-  case class  PathTypeElem(ivs: String)   extends TypeElem[String](removeEQ(ivs))(identity)
+  final case class  SeqTypeElem(delimiter: String, ivs: String)  extends TypeElem[String](toVS(ivs))(identity)
+  final case class  PathTypeElem(ivs: String)   extends TypeElem[String](removeEQ(ivs))(identity)
 
   private def removeEQ(s:String) =
     if (s.startsWith("=")) s.substring(1,s.length) else s

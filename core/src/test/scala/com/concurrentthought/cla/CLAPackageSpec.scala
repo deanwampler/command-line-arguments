@@ -16,7 +16,7 @@ class CLAPackageSpec extends FunSpec {
       }
 
       it ("constructs an Args that parses arguments like any other Args") {
-        val args = argsStr.toArgs.parse(Array(
+        val args = argsStr.toArgs.parse(Seq(
           "--quiet",
           "--anti",
           "--input",     "/foo/bar",

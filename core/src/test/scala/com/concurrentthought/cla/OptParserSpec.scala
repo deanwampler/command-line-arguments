@@ -140,7 +140,7 @@ class OptParserSpec extends FunSpec with ScalaCheckPropertyChecks { //with Parbo
     describe ("FlagsAndType parser") {
       it ("returns a list of flags and the type indicator") {
         typesWithoutInit ++ typesWithInit foreach {
-          case (flag, expectedTypeElem, initVal) =>
+          case (flag, expectedTypeElem, initVal@_) =>
             val (s, expected) = makeFlagsAndTypesElem(flag, expectedTypeElem)
 
             parseWithRule(s, FlagsAndType) match {
@@ -164,7 +164,7 @@ class OptParserSpec extends FunSpec with ScalaCheckPropertyChecks { //with Parbo
     describe ("Full Opt parser") {
       it ("returns an option with a list of flags, the type indicator, and optional help") {
         typesWithoutInit ++ typesWithInit foreach {
-          case (flag, expectedTypeElem, initVal) =>
+          case (flag, expectedTypeElem, initVal@_) =>
             val (s, expectedFTE) = makeFlagsAndTypesElem(flag, expectedTypeElem)
 
             Seq("", "with help") foreach { help =>
@@ -178,7 +178,7 @@ class OptParserSpec extends FunSpec with ScalaCheckPropertyChecks { //with Parbo
       }
       it ("accepts optional arguments enclosed in [...]") {
         typesWithoutInit ++ typesWithInit foreach {
-          case (flag, expectedTypeElem, initVal) =>
+          case (flag, expectedTypeElem, initVal@_) =>
             val (s, expectedFTE) = makeFlagsAndTypesElem(flag, expectedTypeElem)
 
             Seq("", "with help") foreach { help =>

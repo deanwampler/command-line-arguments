@@ -2,7 +2,7 @@ package com.concurrentthought.cla
 
 object SpecHelper {
 
-  val noremains = Args.REMAINING_KEY -> Vector.empty[String]
+  val noremains = Opt.REMAINING_KEY -> Vector.empty[String]
 
   val helpFlag = Opt.flag(
     name    = Args.HELP_KEY,
@@ -57,10 +57,11 @@ object SpecHelper {
     help    = "double help message")
 
   val seqOpt = Opt.seq[Double](delimsRE = "[-_:]")(
-    name     = "seq",
-    flags    = Seq("-s", "--s", "--seq"),
-    default  = Some(Nil),
-    help     = "seq help message")(Opt.toTry(_.toDouble))
+    name       = "seq",
+    flags      = Seq("-s", "--s", "--seq"),
+    default    = Some(Nil),
+    help       = "seq help message")(
+    fromString = Opt.toTry(_.toDouble))
 
 
   val seqStringOpt = Opt.seqString(delimsRE = "[-_:]")(
@@ -83,7 +84,12 @@ object SpecHelper {
   protected val allOpts1 = Vector(helpFlag, antiFlag, stringOpt, byteOpt, charOpt,
     intOpt, longOpt, floatOpt, doubleOpt, seqOpt, seqStringOpt, pathOpt)
   val allOpts = allOpts1 :+ othersOpt
-  val allDefaults = allOpts1.map(o => (o.name, o.default.get)).toMap 
+  val allDefaults = allOpts1.foldLeft(Map.empty[String,Any]) { (map, o) =>
+    o.default match {
+      case None => map
+      case Some(d) => map + (o.name -> d)
+    }
+  }
   val allRemaining = Vector.empty[String]
 
 
@@ -104,14 +110,14 @@ object SpecHelper {
     |""".stripMargin
 
   val expectedOpts = Vector(Args.helpFlag,
-    Opt.string( "input",     Vector("-i", "--in" , "--input"),     None,              "Path to input file.", true),
-    Opt.string( "output",    Vector("-o", "--out", "--output"),    Some("/dev/null"), "Path to output file."),
-    Opt.int   ( "log-level", Vector("-l", "--log", "--log-level"), Some(3),           "Log level to use."),
-    Opt.path  ( "path",      Vector("-p", "--path"),               None,              "Path elements separated by ':' (*nix) or ';' (Windows)."),
+    Opt.string( "input",     Seq("-i", "--in" , "--input"),     None,              "Path to input file.", true),
+    Opt.string( "output",    Seq("-o", "--out", "--output"),    Some("/dev/null"), "Path to output file."),
+    Opt.int   ( "log-level", Seq("-l", "--log", "--log-level"), Some(3),           "Log level to use."),
+    Opt.path  ( "path",      Seq("-p", "--path"),               None,              "Path elements separated by ':' (*nix) or ';' (Windows)."),
     Opt.seqString("""[-|]""")
-              ( "things",    Vector("--things"),                   None,              "Path elements separated by '-' or '|'.", true),
-    Opt.flag(   "quiet",     Vector("-q", "--quiet"),                                 "Suppress some verbose output."),
-    Opt.notflag("anti",      Vector("-a", "--anti"),                                  "An \"antiflag\" (defaults to true)."),
+              ( "things",    Seq("--things"),                   None,              "Path elements separated by '-' or '|'.", true),
+    Opt.flag(   "quiet",     Seq("-q", "--quiet"),                                 "Suppress some verbose output."),
+    Opt.notflag("anti",      Seq("-a", "--anti"),                                  "An \"antiflag\" (defaults to true)."),
     Args.makeRemainingOpt("others", "Other stuff."))
 
   val expectedDefaults = Map[String,Any](

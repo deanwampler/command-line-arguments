@@ -25,7 +25,7 @@ class ArgsSpec extends FunSpec {
     }
     describe ("empty list of options") {
       it ("still includes help") {
-        val args = Args.empty.parse(Array("--help"))
+        val args = Args.empty.parse(Seq("--help"))
         assert(args.programInvocation === Args.defaultProgramInvocation)
         assert(args.leadingComments   === Args.defaultComments)
         assert(args.trailingComments  === Args.defaultComments)
@@ -48,7 +48,7 @@ class ArgsSpec extends FunSpec {
         assert(args.values    === Map(Args.HELP_KEY -> false))
         assert(args.allValues === Map(Args.HELP_KEY -> Vector(false)))
         // after parsing:
-        val args2 = args.parse(Array("--HELP"))
+        val args2 = args.parse(Seq("--HELP"))
         assert(args2.defaults  === Map(Args.HELP_KEY -> false))
         assert(args2.values    === Map(Args.HELP_KEY -> true))
         assert(args2.allValues === Map(Args.HELP_KEY -> Vector(true)))
@@ -56,7 +56,7 @@ class ArgsSpec extends FunSpec {
 
       it ("still includes an option for 'remaining' tokens not associated with flags") {
         val args = Args.empty
-        val args2 = args.parse(Array("foo", "bar"))
+        val args2 = args.parse(Seq("foo", "bar"))
         val remainingName = Args.remainingOpt.name
         Seq(args, args2) foreach { a =>
           assert(a.opts.contains(Args.remainingOpt))
@@ -80,18 +80,18 @@ class ArgsSpec extends FunSpec {
 
     describe ("before parsing") {
       it ("contains a map of the defined options with their default values") {
-        val (args, values, allValues, remaining) = all
+        val (args, values@_, allValues@_, remaining@_) = all
         assert(args.defaults  === allDefaults)
       }
 
       it ("contains maps of the values an 'all values' seen, which equal the default values") {
-        val (args, values, allValues, remaining) = all
+        val (args, values, allValues, remaining@_) = all
         assert(args.values     === values)
         assert(args.allValues  === allValues)
       }
 
       it ("contains the default values for the 'remaining' tokens, if any, which aren't associated with flags") {
-        val (args, values, allValues, remaining) = all
+        val (args, values@_, allValues@_, remaining) = all
         assert(args.remaining === remaining)
       }
     }
@@ -99,18 +99,18 @@ class ArgsSpec extends FunSpec {
     describe ("after parsing") {
 
       it ("contains a map of the defined options, where each value is the LAST specified option value, or the default value") {
-        val (args, values, allValues, remaining) = all
+        val (args, values, allValues@_, remaining@_) = all
         assert(args.values === values)
       }
 
       it ("contains a map of the defined options, where each value has ALL the specified option values, or the default value") {
-        val (args, values, allValues, remaining) = all
+        val (args, values@_, allValues, remaining@_) = all
         assert(args.allValues === allValues)
         assert(args.failures === Nil)
       }
 
       it ("contains all the valid options matched and the failures for invalid options") {
-        val args = Args(opts = allOpts).parse(Array("--foo", "bar", "--string", "hello", "-b"))
+        val args = Args(opts = allOpts).parse(Seq("--foo", "bar", "--string", "hello", "-b"))
         val values = allDefaults + ("string" -> "hello")
         assert(args.values === values)
         assert(args.remaining === Vector("bar"))
@@ -121,7 +121,7 @@ class ArgsSpec extends FunSpec {
       }
 
       it ("contains failures when argument values are not parseable to the correct type") {
-        val args = Args(opts = allOpts).parse(Array(
+        val args = Args(opts = allOpts).parse(Seq(
           "--byte",   "z",
           "--char",   "",
           "--int",    "z",
@@ -152,7 +152,7 @@ class ArgsSpec extends FunSpec {
       }
 
       it ("contains values for successfully-parsed input and failures when the arguments couldn't be parsed, for repeated options") {
-        val args = Args(opts = allOpts).parse(Array(
+        val args = Args(opts = allOpts).parse(Seq(
           "--byte",   "1",
           "--byte",   "z",
           "--byte",   "2"))
@@ -169,16 +169,16 @@ class ArgsSpec extends FunSpec {
       }
 
       it ("contains a 'remaining' value for the non-flag, unrecognized arguments") {
-        val args = Args.empty.parse(Array("a", "b"))
+        val args = Args.empty.parse(Seq("a", "b"))
         assert(args.remaining === Vector("a", "b"))
         assert(args.values === Map(Args.HELP_KEY -> false))
         assert(args.allValues === Map(Args.HELP_KEY -> Vector(false)))
         assert(args.failures.isEmpty)
       }
 
-      val req1 = Opt.string("req1", Seq("--r1"), requiredFlag = true)
-      val req2 = Opt.string("req2", Seq("--r2"), requiredFlag = true, default = Some("foo"))
-      val req3 = Opt.string("req3", Seq("--r3"), requiredFlag = true)
+      val req1 = Opt.string("req1", Seq("--r1"), required = true)
+      val req2 = Opt.string("req2", Seq("--r2"), required = true, default = Some("foo"))
+      val req3 = Opt.string("req3", Seq("--r3"), required = true)
       val requiredArgs = Args(opts = Seq(req1, req2, req3))
 
       it ("contains a list of the required options, which are marked required AND don't have default values") {
@@ -186,14 +186,14 @@ class ArgsSpec extends FunSpec {
       }
 
       it ("returns failures for required options that weren't specified") {
-        val args2 = requiredArgs.parse(Array.empty[String])
+        val args2 = requiredArgs.parse(Nil)
         assert(args2.failures === Seq(
           ("req1", Args.MissingRequiredArgument(req1)),
           ("req3", Args.MissingRequiredArgument(req3))))
       }
 
       def unknowns() = {
-        val args = Args.empty.parse(Array("--foo", "-b", "bbb"))
+        val args = Args.empty.parse(Seq("--foo", "-b", "bbb"))
         assert(args.values    === Map(Args.HELP_KEY -> false))
         assert(args.remaining === Vector("bbb"))
         val expected = List(
@@ -209,7 +209,7 @@ class ArgsSpec extends FunSpec {
       it ("contains failures when an option is at the end of the list without a required value") {
         val args = Args(opts = allOpts)
         Seq("--byte", "--char", "--int", "--long", "--float", "--float", "--double", "--double", "--seq") foreach { flag =>
-          val args2 = args.parse(Array(flag))
+          val args2 = args.parse(Seq(flag))
           assert(args2.defaults === allDefaults)
           assert(args2.values   === allDefaults)
           assert(args2.remaining === Vector.empty[String])
@@ -230,7 +230,7 @@ class ArgsSpec extends FunSpec {
         val bytes = new ByteArrayOutputStream(2048)
         val out2 = new PrintStream(bytes, true)
         val args = Args(opts = allOpts).process(
-          Array("--string", "hello"), out2, unexpectedExit)
+          Seq("--string", "hello"), out2, unexpectedExit)
         val values = allDefaults + ("string" -> "hello")
         assert(args.values === values)
         assert(args.remaining.size === 0)
@@ -242,7 +242,7 @@ class ArgsSpec extends FunSpec {
         val bytes = new ByteArrayOutputStream(2048)
         val out2 = new PrintStream(bytes, true)
         Args(opts = allOpts).process(
-          Array("--help", "--string", "hello"), out2, expectedExit(0))
+          Seq("--help", "--string", "hello"), out2, expectedExit(0))
         assert(bytes.size !== 0)
       }
 
@@ -250,14 +250,14 @@ class ArgsSpec extends FunSpec {
         val bytes = new ByteArrayOutputStream(2048)
         val out2 = new PrintStream(bytes, true)
         Args(opts = allOpts).process(
-          Array("--bogus", "--string", "hello"), out2, expectedExit(1))
+          Seq("--bogus", "--string", "hello"), out2, expectedExit(1))
         assert(bytes.size !== 0)
       }
     }
 
     describe ("get[V]") {
       it ("returns an Option[V] for the flag, either the default or the last user-specified value.") {
-        val (args, values, allValues, remaining) = all
+        val (args, values@_, allValues@_, remaining@_) = all
         assert(args.get[String]("foo")      === None)
         assert(args.get[String]("string")   === Some("world!"))
         assert(args.get[Byte]("byte")       === Some(3))
@@ -272,7 +272,7 @@ class ArgsSpec extends FunSpec {
 
     describe ("getOrElse[V]") {
       it ("returns the found value or the default of type V for the flag or the second argument") {
-        val (args, values, allValues, remaining) = all
+        val (args, values@_, allValues@_, remaining@_) = all
         assert(args.getOrElse("string", "goodbye!")  === "world!")
         assert(args.getOrElse("string2", "goodbye!") === "goodbye!")
         assert(args.getOrElse("byte", 1)             === 3)
@@ -284,7 +284,7 @@ class ArgsSpec extends FunSpec {
 
     describe ("getAll[V]") {
       it ("returns a Seq[V] of the values for all invocations of the option, or the default value") {
-        val (args, values, allValues, remaining) = all
+        val (args, values@_, allValues@_, remaining@_) = all
         assert(args.getAll[String]("foo")      === Nil)
         assert(args.getAll[String]("string")   === Vector("hello", "world!"))
         assert(args.getAll[Byte]("byte")       === Vector(2,3))
@@ -296,14 +296,14 @@ class ArgsSpec extends FunSpec {
         assert(args.getAll[Seq[Double]]("seq") === Vector(Seq(111.3, 126.2, 123.4, 354.6)))
       }
       it ("returns Nil if there were no invocations of the option and the default value is None") {
-        val (args, values, allValues, remaining) = all
+        val (args, values@_, allValues@_, remaining@_) = all
         assert(args.getAll[String]("foo") === Nil)
       }
     }
 
     describe ("getOrElse[V]") {
       it ("returns a Seq[V] the values for all invocations of the option or the default value or the second argument") {
-        val (args, values, allValues, remaining) = all
+        val (args, values@_, allValues@_, remaining@_) = all
         assert(args.getAllOrElse("string", Seq("goodbye!"))  === Vector("hello", "world!"))
         assert(args.getAllOrElse("string2", Seq("goodbye!")) === Seq("goodbye!"))
         assert(args.getAllOrElse("byte", Seq(1))             === Vector(2,3))
@@ -377,7 +377,7 @@ class ArgsSpec extends FunSpec {
       }
 
       it ("prints the default values overridden by user-specified options (the last invocation of any one option...) after parsing is done") {
-        val args = Args(opts = allOpts).parse(Array(
+        val args = Args(opts = allOpts).parse(Seq(
           "--help",
           "--anti",
           "--string",     "hello",
@@ -442,7 +442,7 @@ class ArgsSpec extends FunSpec {
       }
 
       it ("prints the default values overridden by user-specified options after parsing is done") {
-        val args = Args(opts = allOpts).parse(Array(
+        val args = Args(opts = allOpts).parse(Seq(
           "--help",
           "--anti",
           "--string",     "hello",
@@ -489,13 +489,13 @@ class ArgsSpec extends FunSpec {
         assert(out.toString.length === 0, out.toString)
       }
       it ("does nothing if help wasn't requested") {
-        val args = Args(opts = allOpts).parse(Array[String]())
+        val args = Args(opts = allOpts).parse(Nil)
         val out = new StringOut
         args.handleHelp(out.out)
         assert(out.toString.length === 0, out.toString)
       }
       it ("prints the help message to the out PrintStream, if help is requested") {
-        val args = Args(opts = allOpts).parse(Array("--help"))
+        val args = Args(opts = allOpts).parse(Seq("--help"))
         val out = new StringOut
         args.handleHelp(out.out)
         assert(out.toString.length > 0)
@@ -510,13 +510,13 @@ class ArgsSpec extends FunSpec {
         assert(out.toString.length === 0, out.toString)
       }
       it ("does nothing if no parsing errors occurred") {
-        val args = Args(opts = allOpts).parse(Array("--help"))
+        val args = Args(opts = allOpts).parse(Seq("--help"))
         val out = new StringOut
         args.handleErrors(out.out)
         assert(out.toString.length === 0, out.toString)
       }
       it ("prints the error and help messages to the out PrintStream if errors occurred") {
-        val args = Args(opts = allOpts).parse(Array("--xxx"))
+        val args = Args(opts = allOpts).parse(Seq("--xxx"))
         val out = new StringOut
         args.handleErrors(out.out)
         assert(out.toString.length > 0)
@@ -529,7 +529,7 @@ class ArgsSpec extends FunSpec {
     Opt.InvalidValueString(flag, value, ex)
 
   private def all: (Args, Map[String,Any], Map[String,Seq[Any]], Vector[String]) = {
-    val args = Args(opts = allOpts).parse(Array(
+    val args = Args(opts = allOpts).parse(Seq(
       "--string",     "hello",
       "--string",     "world!",
       "--byte",       "2",
@@ -602,50 +602,9 @@ class ArgsSpec extends FunSpec {
 
   describe ("remainingOpt") {
     it ("defines a 'remaining' option for the command-line tokens not associated with flags") {
-      assert(Args.remainingOpt.name    === Args.REMAINING_KEY)
+      assert(Args.remainingOpt.name    === Opt.REMAINING_KEY)
       assert(Args.remainingOpt.flags   === Nil)
       assert(Args.remainingOpt.default === None)
-    }
-  }
-
-  describe ("socketOpt") {
-    it ("defines a socket (host:port) option") {
-      assert(Args.socketOpt().default === None)
-    }
-    it ("can be made required") {
-      assert(Args.socketOpt(required = true).required === true)
-    }
-
-    describe ("""requires a string of the form "host:port" option""") {
-      it ("can be provided a default value") {
-        assert(Args.socketOpt(default = Some(("host",123))).default === Some(("host",123)))
-      }
-      it ("succeeds if the host is a name or IP address and the port is an integer") {
-        val expected = (("socket", Try(("host", 123))), Nil)
-        assert(Args.socketOpt().parser(Seq("--socket", "host:123")) === expected)
-      }
-      it ("returns a Failure(Opt.InvalidValueString) if the :port is missing") {
-        Args.socketOpt().parser(Seq("--socket", "host"))
-        val result = Args.socketOpt().parser(Seq("--socket", "host", "--bar"))
-        val r1 = ("socket", Failure(Opt.InvalidValueString("--socket", "host", None)))
-        val r2 = Seq("--bar")
-        assert((r1, r2) === result)
-      }
-      it ("returns a Failure(Opt.InvalidValueString) if the host: is missing") {
-        val result = Args.socketOpt().parser(Seq("--socket", "123", "--bar"))
-        val r1 = ("socket", Failure(Opt.InvalidValueString("--socket", "123", None)))
-        val r2 = Seq("--bar")
-        assert((r1, r2) === result)
-      }
-      it ("returns a Failure(Opt.InvalidValueString) if the port is not an integer") {
-        Args.socketOpt().parser(Seq("--socket", "host:foo", "--bar")) match {
-          case (("socket", Failure(failure)), Seq("--bar")) => failure match {
-            case Opt.InvalidValueString("--socket", "host:foo (not an int?)", Some(th)) => /* pass */
-            case _ => fail("Unexpected exception: "+failure)
-          }
-          case badResult => fail(badResult.toString)
-        }
-      }
     }
   }
 

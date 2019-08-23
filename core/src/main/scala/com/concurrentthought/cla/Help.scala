@@ -24,7 +24,7 @@ object Help {
   protected def errorsHelp(args: Args): Vector[String] =
     if (args.failures.size == 0) Vector.empty
     else "The following parsing errors occurred:" +:
-      args.failures.map{ case (flag, err) => s"  $err" }.toVector
+      args.failures.map{ case (flag@_, err) => s"  $err" }.toVector
 
   protected def argsHelp(args: Args): Vector[String] = {
     val strings = args.opts.map(o => (toFlagsHelp(o), toHelp(o)))
@@ -40,13 +40,13 @@ object Help {
 
   protected def toFlagsHelp(opt: Opt[_]): String = {
     val prefix = "  "
-    val valueName = opt match { 
-      case f: Opt.Flag => ""
+    val valueName = opt match {
+      case _: Opt.Flag => ""
       case _ => opt.name
     }
     val s = opt.flags.mkString(" | ")
-    val (pre, suf) = if (!opt.required) ("[", "]") else (" ", " ")
-    if (s.trim.length == 0) prefix+pre+valueName+suf 
+    val (pre, suf) = if (!opt.isRequired) ("[", "]") else (" ", " ")
+    if (s.trim.length == 0) prefix+pre+valueName+suf
     else if (valueName.length > 0) prefix+pre+s+prefix+valueName+suf
     else prefix+pre+s+suf
   }
@@ -57,7 +57,7 @@ object Help {
     opt.default match {
       case None => hs
       case Some(d) => d match {
-        case b: Boolean => hs  // suppress!
+        case _: Boolean => hs  // suppress!
         case _ => hs ++ Vector(s"(default: ${d})")
       }
     }
@@ -70,9 +70,14 @@ object Help {
    * A bit of a hack...
    */
   protected def trailing(args: Args): String =
-    if (args.opts.exists(o => o.isInstanceOf[Opt.Flag] == false && o.flags != Nil)) {
+    if (args.opts.exists(addTrailer)) {
       "You can also use --foo=bar syntax. Arguments shown in [...] are optional. All others are required."
     } else ""
+  protected val addTrailer: Opt[_] => Boolean = opt => opt match {
+    case _: Opt.Flag => false
+    case _ if opt.flags == Nil => false
+    case _ => true
+  }
 
   protected def wrap(s: String): Vector[String] = {
     s.foldLeft((Vector.empty[String], 0, "")) {

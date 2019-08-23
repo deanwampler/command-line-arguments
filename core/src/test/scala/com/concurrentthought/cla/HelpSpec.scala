@@ -8,7 +8,7 @@ class HelpSpec extends FunSpec {
     name    = "in",
     flags   = Seq("-i", "--in", "--input"),
     help    = "Input files with an extremely long help message that should be wrapped by Help so it doesn't run off the screen like it does in this test source file!",
-    requiredFlag = true)
+    required = true)
   val outOpt = Opt.string(
     name    = "out",
     flags   = Seq("-o", "--o", "--out", "--output"),
@@ -18,18 +18,18 @@ class HelpSpec extends FunSpec {
     name    = "req1",
     flags   = Seq("-r1", "--r1", "--req1"),
     help    = "Required opt. 1",
-    requiredFlag = true)
+    required = true)
   val reqOpt2 = Opt.string(
     name    = "req2",
     flags   = Seq("-r2", "--r2", "--req2"),
     default = Some("foo"),
     help    = "Required opt. 2 (not really required)",
-    requiredFlag = true)
+    required = true)
 
   describe ("Help") {
     it ("returns a help string based on the command-line arguments") {
       val args = Args(
-        "java HelpSpec", 
+        "java HelpSpec",
         "A ScalaTest for the Help class.",
         "Trailing comments.",
         Seq(inOpt, outOpt, reqOpt1, reqOpt2, Args.quietFlag))
@@ -81,7 +81,7 @@ class HelpSpec extends FunSpec {
       doOptionalArgs
     }
     it ("the 'remaining' arguments can be specified explicitly to make them required") {
-      val help = Help(Args("java HelpSpec", Seq(Args.makeRemainingOpt(requiredFlag=true))))
+      val help = Help(Args("java HelpSpec", Seq(Args.makeRemainingOpt(required=true))))
       assert(help ===
         s"""Usage: java HelpSpec [options]
         |
@@ -97,8 +97,8 @@ class HelpSpec extends FunSpec {
 
     it ("returns a help string that includes the error messages after parsing") {
       val args = Args(
-        "java HelpSpec", 
-        "A ScalaTest for no user-defined options.", 
+        "java HelpSpec",
+        "A ScalaTest for no user-defined options.",
         "Trailing comments.",
         Seq(intOpt))
         .parse(Seq("--foo", "--int", "x"))
@@ -108,7 +108,7 @@ class HelpSpec extends FunSpec {
         |A ScalaTest for no user-defined options.
         |The following parsing errors occurred:
         |  Unrecognized argument (or missing value): --foo (rest of arguments: --int x)
-        |  Invalid value string: x for option --int (cause: java.lang.NumberFormatException: For input string: "x")
+        |  Invalid value string: x for option --int (cause java.lang.NumberFormatException: For input string: "x")
         |Where the supported options are the following:
         |
         |  [-h | --h | --help]        Show this help message.
