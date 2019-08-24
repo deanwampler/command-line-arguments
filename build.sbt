@@ -93,7 +93,7 @@ lazy val compilerFlags = Seq(
         Seq(
           "-Yno-adapted-args",                 // Do not adapt an argument list (either by inserting () or creating a tuple) to match the receiver.
           "-Ypartial-unification",             // Enable partial unification in type constructor inference
-          "Xfuture"                            // Replaced by -Xsource:2.14, which we don't need yet...
+          // "Xfuture"                            // Replaced by -Xsource:2.14, which we don't need yet...
         )
       case _ =>
         Seq.empty
