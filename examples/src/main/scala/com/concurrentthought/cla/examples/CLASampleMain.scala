@@ -124,7 +124,7 @@ object CLASampleMain {
       // inferred here.
       showPathElements(parsedArgs.get[Seq[String]]("path"))
       showLogLevel(parsedArgs.getOrElse("log-level", 0))
-      println
+      println()
     }
   }
 

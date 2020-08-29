@@ -72,13 +72,13 @@ class HelpSpec extends FunSpec {
     }
 
     it ("returns a help string even when help is the only command-line argument supported") {
-      doOptionalArgs
+      doOptionalArgs()
     }
     it ("returns a help string with [...] around optional arguments") {
-      doOptionalArgs
+      doOptionalArgs()
     }
     it ("defaults the 'remaining' arguments to optional") {
-      doOptionalArgs
+      doOptionalArgs()
     }
     it ("the 'remaining' arguments can be specified explicitly to make them required") {
       val help = Help(Args("java HelpSpec", Seq(Args.makeRemainingOpt(required=true))))

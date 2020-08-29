@@ -7,7 +7,7 @@ This is a [Scala](http://scala-lang.org) library for handling command-line argum
 
 ## Usage
 
-This library is built for Scala 2.11.12, 2.12.9, and 2.13.0. Artifacts are published to [Sonatype's OSS service](https://oss.sonatype.org/index.html#nexus-search;quick~concurrentthought). You'll need the following settings.
+This library is built for Scala 2.11.12, 2.12.12, and 2.13.3. Artifacts are published to [Sonatype's OSS service](https://oss.sonatype.org/index.html#nexus-search;quick~concurrentthought). You'll need the following settings.
 
 ```
 resolvers ++= Seq(
@@ -16,7 +16,7 @@ resolvers ++= Seq(
 )
 ...
 
-scalaVersion := "2.12.9"
+scalaVersion := "2.13.3"
 
 libraryDependencies ++= Seq(
   "com.concurrentthought.cla" %% "command-line-arguments"          % "0.6.0"

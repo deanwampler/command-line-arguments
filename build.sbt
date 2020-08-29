@@ -1,14 +1,14 @@
 // Many details adapted from the Cats build: https://github.com/non/cats
-import com.typesafe.sbt.pgp.PgpKeys.publishSigned
+// import com.typesafe.sbt.pgp.PgpKeys.publishSigned
 import com.typesafe.sbt.SbtGit.GitKeys._
 import com.typesafe.sbt.SbtSite.SiteKeys._
 import ReleaseTransformations._
 import ScoverageSbtPlugin._
 
 val scala211 = "2.11.12"
-val scala212 = "2.12.9"
-val scala213 = "2.13.0"
-val scalaDefaultVersion = scala212
+val scala212 = "2.12.12"
+val scala213 = "2.13.3"
+val scalaDefaultVersion = scala213
 
 // Our set of warts
 lazy val myWarts =
@@ -64,7 +64,6 @@ lazy val compilerFlags = Seq(
           "-Xlint:inaccessible",               // Warn about inaccessible types in method signatures.
           "-Xlint:infer-any",                  // Warn when a type argument is inferred to be `Any`.
           "-Xlint:missing-interpolator",       // A string literal appears to be missing an interpolator id.
-          "-Xlint:nullary-override",           // Warn when non-nullary `def f()' overrides nullary `def f'.
           "-Xlint:nullary-unit",               // Warn when nullary methods return Unit.
           "-Xlint:option-implicit",            // Option.apply used implicit view.
           "-Xlint:package-object-classes",     // Class or object defined in package object.
@@ -92,6 +91,7 @@ lazy val compilerFlags = Seq(
       case Some((2, n)) if n == 12 =>
         Seq(
           "-Yno-adapted-args",                 // Do not adapt an argument list (either by inserting () or creating a tuple) to match the receiver.
+          "-Xlint:nullary-override",           // Warn when non-nullary `def f()' overrides nullary `def f'.
           "-Ypartial-unification",             // Enable partial unification in type constructor inference
           // "Xfuture"                            // Replaced by -Xsource:2.14, which we don't need yet...
         )
@@ -123,7 +123,7 @@ lazy val buildSettings = Seq(
   scalaVersion       := scalaDefaultVersion,
   crossScalaVersions := Seq(scala213, scala212, scala211),
   maxErrors          := 5,
-  triggeredMessage   := Watched.clearWhenTriggered,
+  watchTriggeredMessage   := Watch.clearScreenOnTrigger,
   fork in console    := true,
   libraryDependencies ++= Seq(
     "org.parboiled"  %% "parboiled-scala" % "1.3.1",
